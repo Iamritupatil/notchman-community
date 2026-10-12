@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' blob:; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>Notchman</title>
+  <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="dashboard">
+  <nav class="sidebar">
+    <div class="brand"><img src="../../assets/shiba-face.png" alt=""><span>Notchman</span></div>
+    <button class="tab" data-tab="home"><span class="ico">⌂</span>Home</button>
+    <button class="tab" data-tab="history"><span class="ico">↺</span>History</button>
+    <button class="tab" data-tab="plan"><span class="ico">★</span>Plan</button>
+    <button class="tab" data-tab="settings"><span class="ico">⚙</span>Settings</button>
+    <button class="tab" data-tab="about"><span class="ico">ⓘ</span>About &amp; updates<span class="dot gone" id="updateDot"></span></button>
+    <div class="spacer"></div>
+    <div class="side-card community-only">
+      <div class="plan-chip">Community</div>
+      <p class="muted small-note">Free for personal use, with your own API keys.</p>
+      <button class="primary small" data-action="pro">Get Notchman Pro</button>
+    </div>
+    <div class="side-card pro-only">
+      <div class="plan-chip" id="planChip">Free</div>
+      <div class="side-voice"><div class="meter"><div id="sideMeter"></div></div><span id="sideVoice">Notchman voice</span></div>
+      <button class="primary small" data-goto="plan" id="sideUpgrade">Upgrade</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Home -->
+    <section class="panel" data-panel="home">
+      <div class="banner gone" id="updateBanner">
+        <span id="updateText">A new version of Notchman is ready.</span>
+        <button class="primary small" id="bannerInstall">Update now</button>
+      </div>
+      <header class="page-head">
+        <div>
+          <h1 id="greeting">Hi there!</h1>
+          <p class="lead">Select or copy anything, then press <kbd id="homeTldrKey">Alt+T</kbd> for a TL;DR or <kbd id="homeReadKey">Alt+R</kbd> to hear it in full. Or click the Shiba.</p>
+        </div>
+      </header>
+
+      <div class="actions">
+        <button class="action" data-action="tldr"><span class="big-ico">⚡</span><b>TL;DR what I copied</b><small>The short version, read aloud</small></button>
+        <button class="action" data-action="read"><span class="big-ico">🔊</span><b>Read what I copied</b><small>Every word, in the free voice</small></button>
+        <button class="action" data-action="pick"><span class="big-ico">⌖</span><b>Pick on screen <span class="pro-badge community-only">PRO</span></b><small>Choose a paragraph anywhere</small></button>
+      </div>
+
+      <div class="stats">
+        <div class="card stat"><h2>Listens</h2><div class="big" id="statListens">0</div><p class="muted">on this computer</p></div>
+        <div class="card stat"><h2>Minutes heard</h2><div class="big" id="statMinutes">0</div><p class="muted">while you kept working</p></div>
+        <div class="card stat"><h2>Reading saved</h2><div class="big" id="statSaved">0 min</div><p class="muted">thanks to TL;DRs</p></div>
+        <div class="card stat pro-only"><h2>Notchman voice</h2><div class="big" id="voiceCount">–</div><div class="meter"><div id="voiceMeter"></div></div><p class="muted" id="voiceNote">Loading your plan…</p></div>
+      </div>
+
+      <div class="card">
+        <div class="row-between"><h2>Recent</h2><button class="link" data-goto="history">See all</button></div>
+        <ul class="history" id="recent"></ul>
+      </div>
+    </section>
+
+    <!-- History -->
+    <section class="panel" data-panel="history">
+      <header class="page-head row-between">
+        <div><h1>History</h1><p class="lead">Everything you've listened to on this computer. Replaying doesn't use your allowance again.</p></div>
+        <button class="link danger" id="clearHistory">Clear all</button>
+      </header>
+      <input class="search" id="search" type="search" placeholder="Search your history">
+      <div class="split">
+        <ul class="history card list" id="history"></ul>
+        <article class="card detail" id="detail">
+          <p class="muted">Choose something on the left to see what was said.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Plan -->
+    <section class="panel" data-panel="plan">
+      <header class="page-head"><h1>Your plan</h1><p class="lead" id="planLead">Loading…</p></header>
+      <div class="card community-only">
+        <h2>Notchman Community</h2>
+        <p class="muted">You're running the free Community edition (personal, non-commercial use): TL;DRs and reading with your own API keys, straight from this computer to Groq and ElevenLabs. No account, no limits from us.</p>
+        <h2 class="gap-top">Notchman Pro adds</h2>
+        <ul class="pro-list">
+          <li><b>Pick on screen</b>: click the Shiba and choose any paragraph on screen, no copying.</li>
+          <li><b>No API keys</b>: the Notchman cloud makes the TL;DR and the natural voice for you.</li>
+          <li><b>Better TL;DRs</b>: a multi-step summary that checks nothing important was left out.</li>
+          <li><b>iPhone app</b> and automatic updates.</li>
+        </ul>
+        <button class="primary" data-action="pro">Get Notchman Pro at notchman.app</button>
+      </div>
+      <div class="cards plans pro-only">
+        <div class="card plan" data-plan="free">
+          <h2>Free</h2>
+          <div class="price">Free forever</div>
+          <ul>
+            <li>5 TL;DRs a day</li>
+            <li>Notchman voice preview (2,500 characters)</li>
+            <li>Unlimited free voice on your computer</li>
+          </ul>
+          <button class="secondary" disabled>Included</button>
+        </div>
+        <div class="card plan" data-plan="pro">
+          <h2>Pro</h2>
+          <div class="price">$4.99 / month</div>
+          <ul>
+            <li>25,000 characters a month in the Notchman voice (about 28 minutes)</li>
+            <li>Natural ElevenLabs voices, faster start</li>
+            <li>After that, the standard natural voice, unlimited</li>
+          </ul>
+          <button class="primary" data-upgrade="pro">Upgrade to Pro</button>
+        </div>
+        <div class="card plan best" data-plan="proplus">
+          <span class="badge">Best value</span>
+          <h2>Pro+</h2>
+          <div class="price">$9.99 / month</div>
+          <ul>
+            <li>60,000 characters a month in the Notchman voice (about 1 hour 7 minutes)</li>
+            <li>Enough for full reads in the Notchman voice</li>
+            <li>Everything in Pro</li>
+          </ul>
+          <button class="primary" data-upgrade="proplus">Upgrade to Pro+</button>
+        </div>
+      </div>
+      <div class="card pro-only">
+        <p class="muted">Checkout opens in your browser; the price shown there includes any tax. Your plan is linked to this computer and appears here a moment after you pay. Subscriptions renew automatically until cancelled; cancel anytime from your receipt email. By upgrading you agree to the <a href="https://notchman.app/terms" target="_blank">Terms of Service</a> and <a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a>.</p>
+        <button class="secondary" id="refreshPlan">I've paid: refresh</button>
+      </div>
+    </section>
+
+    <!-- Settings (settings.js) -->
+    <section class="panel" data-panel="settings">
+      <header class="page-head"><h1>Settings</h1><p class="lead">Press <kbd id="tldrKeyLabel">Alt+T</kbd> for a TL;DR anywhere.</p></header>
+      <div class="card community-only keys-card">
+        <h2>Your API keys</h2>
+        <p class="muted">Saved encrypted on this computer and sent only to the provider they belong to. Get a free Groq key at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>.</p>
+        <label class="key-row"><span>Groq API key <b>(needed)</b></span><input type="password" id="key-GROQ_API_KEY" placeholder="gsk_…" autocomplete="off" spellcheck="false"><small id="src-GROQ_API_KEY"></small></label>
+        <label class="key-row"><span>ElevenLabs API key (optional: natural voices; without it the free voice on your computer reads)</span><input type="password" id="key-ELEVENLABS_API_KEY" placeholder="sk_…" autocomplete="off" spellcheck="false"><small id="src-ELEVENLABS_API_KEY"></small></label>
+        <details>
+          <summary>Use another AI provider (OpenAI, OpenRouter, Ollama…)</summary>
+          <label class="key-row"><span>Base URL (OpenAI-compatible)</span><input type="text" id="key-LLM_BASE_URL" placeholder="http://localhost:11434/v1" autocomplete="off" spellcheck="false"><small id="src-LLM_BASE_URL"></small></label>
+          <label class="key-row"><span>Model</span><input type="text" id="key-LLM_MODEL" placeholder="llama3.1" autocomplete="off" spellcheck="false"><small id="src-LLM_MODEL"></small></label>
+          <label class="key-row"><span>API key (not needed for a local Ollama)</span><input type="password" id="key-LLM_API_KEY" autocomplete="off" spellcheck="false"><small id="src-LLM_API_KEY"></small></label>
+        </details>
+        <div class="row-between"><span class="muted" id="keysStatus"></span><button class="primary" id="saveKeys">Save keys</button></div>
+      </div>
+      <div class="card"><h2>Voice</h2><div id="voices" class="voices grid"></div></div>
+      <div class="two">
+        <div class="card"><h2>Speed</h2><div class="segmented" id="speeds"></div></div>
+        <div class="card">
+          <h2>Shortcuts</h2>
+          <label class="row">TL;DR <select id="tldrShortcut"></select></label>
+          <label class="row">Read in full <select id="readShortcut"></select></label>
+        </div>
+      </div>
+      <div class="card"><label class="row check"><input type="checkbox" id="openAtLogin"> Start Notchman when the computer starts</label></div>
+      <div class="card community-only">
+        <h2>Privacy</h2>
+        <p class="muted">Everything stays on this computer. Text you TL;DR goes straight from here to Groq (or your AI provider) and, if you added a key, to ElevenLabs, with your own keys. Notchman has no server in this edition.</p>
+      </div>
+      <div class="card legal-links pro-only">
+        <h2>Privacy</h2>
+        <p class="muted">History, screen reading and the free voice stay on this computer. Text you TL;DR goes to Groq (summary) and to ElevenLabs or Microsoft Azure (voice) only to make your audio.</p>
+        <p class="muted">Install ID (quote it in privacy requests): <code id="installId"></code></p>
+        <p><a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a> · <a href="https://notchman.app/terms" target="_blank">Terms of Service</a></p>
+      </div>
+    </section>
+
+    <!-- About & updates -->
+    <section class="panel" data-panel="about">
+      <header class="page-head"><h1>About &amp; updates</h1><p class="lead">Notchman for <span id="platformName">your computer</span>.</p></header>
+      <div class="card update-card">
+        <div>
+          <h2>Version</h2>
+          <div class="big" id="versionNumber">–</div>
+          <p class="muted" id="updateStatus">Checking for updates…</p>
+        </div>
+        <div class="update-buttons pro-only">
+          <button class="primary gone" id="installUpdate">Update now</button>
+          <button class="secondary" id="checkUpdate">Check for updates</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Help</h2>
+        <p class="muted community-only">Notchman Community is free for personal, non-commercial use (see LICENSE and NOTICE.md); for work or business use, get Notchman Pro. Report bugs and ideas on GitHub; to update, run <code>git pull</code> and <code>npm install</code> in its folder.</p>
+        <p class="muted pro-only">Questions or something not working? Email <a href="mailto:ritu@miniclayai.com">ritu@miniclayai.com</a>. Notchman is also on iPhone: <a href="https://notchman.app" target="_blank">notchman.app</a>.</p>
+      </div>
+      <footer id="version"></footer>
+    </section>
+  </main>
+
+  <script src="settings.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

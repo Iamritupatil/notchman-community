@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' blob:; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <link rel="stylesheet" href="pill.css">
+</head>
+<body>
+  <div id="pill" class="pill hidden">
+    <img class="mascot" src="../../assets/shiba-face.png" alt="">
+    <div class="middle">
+      <div class="title" id="title">Notchman</div>
+      <div class="status" id="status"></div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+    </div>
+    <div class="controls" id="controls">
+      <button id="back" title="Back 15 seconds" aria-label="Back 15 seconds">
+        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg><span class="n">15</span>
+      </button>
+      <button id="playPause" title="Pause" aria-label="Pause">
+        <svg id="iconPause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        <svg id="iconPlay" viewBox="0 0 24 24" class="gone"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+      </button>
+      <button id="forward" title="Forward 15 seconds" aria-label="Forward 15 seconds">
+        <svg viewBox="0 0 24 24"><path d="M12 5V2l5 4-5 4V7a5 5 0 1 0 5 5h2a7 7 0 1 1-7-7z"/></svg><span class="n">15</span>
+      </button>
+      <button id="speed" class="text" title="Speed">1×</button>
+      <button id="original" class="text" title="Read the full original">Full</button>
+      <button id="stop" title="Stop" aria-label="Stop">
+        <svg viewBox="0 0 24 24"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg>
+      </button>
+    </div>
+  </div>
+  <script src="pill.js"></script>
+</body>
+</html>

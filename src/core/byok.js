@@ -1,0 +1,148 @@
+'use strict';
+
+// Community edition: TL;DRs and voice with your own API keys, straight from
+// this computer to the provider. No Notchman server, no account, no limits
+// beyond your provider's.
+//
+//  - Summaries: Groq (free key at console.groq.com), or any OpenAI-compatible
+//    API via LLM_BASE_URL / LLM_API_KEY / LLM_MODEL (OpenAI, OpenRouter, a
+//    local Ollama at http://localhost:11434/v1, ...).
+//  - Voice: ElevenLabs with ELEVENLABS_API_KEY; without it, the free Kokoro
+//    voice that runs on this computer.
+
+const GROQ = 'https://api.groq.com/openai/v1';
+const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+const MAX_INPUT_CHARACTERS = 20_000;
+
+class ApiError extends Error {
+  constructor(message, status = 0) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+const INSTRUCTIONS = [
+  'You turn text into a short TL;DR that will be read aloud.',
+  'Read all of it first, then say what matters most in the clearest order, not sentence by sentence.',
+  'Keep every material detail exactly: numbers, dates, names, prices, conditions, and who needs to do what.',
+  'Write natural spoken sentences: no lists, no markdown, no emojis, no "this text says".',
+  'Use the language of the text. Reply with only the TL;DR.',
+].join(' ');
+
+function wordLimit(text) {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(40, Math.min(120, Math.round(words / 3)));
+}
+
+/**
+ * @param {{ keys: { get(name: string): string, has(name: string): boolean }, fetch?: typeof fetch }} options
+ */
+function createClient({ keys, fetch: fetchImpl = fetch }) {
+  function llm() {
+    const custom = keys.get('LLM_BASE_URL');
+    const key = custom ? keys.get('LLM_API_KEY') : keys.get('GROQ_API_KEY');
+    return {
+      base: (custom || GROQ).replace(/\/+$/, ''),
+      key,
+      model: keys.get('LLM_MODEL') || (custom ? '' : DEFAULT_MODEL),
+      name: custom ? 'your AI provider' : 'Groq',
+      local: /^https?:\/\/(localhost|127\.0\.0\.1)/.test(custom),
+    };
+  }
+
+  async function complete(text) {
+    const provider = llm();
+    if (!provider.key && !provider.local) {
+      throw new ApiError('Add your free Groq API key in Settings to make TL;DRs.', 401);
+    }
+    if (!provider.model) throw new ApiError('Set LLM_MODEL for your AI provider in Settings.', 400);
+    let response;
+    try {
+      response = await fetchImpl(`${provider.base}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(provider.key ? { Authorization: `Bearer ${provider.key}` } : {}) },
+        body: JSON.stringify({
+          model: provider.model,
+          temperature: 0.3,
+          max_tokens: 700,
+          messages: [
+            { role: 'system', content: INSTRUCTIONS },
+            { role: 'user', content: `Make a TL;DR of this in ${wordLimit(text)} words at most.\n\nTEXT:\n${text.slice(0, MAX_INPUT_CHARACTERS)}` },
+          ],
+        }),
+        signal: AbortSignal.timeout(45_000),
+      });
+    } catch {
+      throw new ApiError(`Couldn't reach ${provider.name}. Check your connection.`, 0);
+    }
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401 || response.status === 403) {
+      throw new ApiError(`${provider.name} didn't accept your API key. Check it in Settings.`, response.status);
+    }
+    if (response.status === 429) {
+      throw new ApiError(`${provider.name}'s rate limit is reached for now. Try again in a minute.`, 429);
+    }
+    if (!response.ok) {
+      throw new ApiError(data?.error?.message ? `${provider.name}: ${data.error.message}` : `${provider.name} returned ${response.status}.`, response.status);
+    }
+    const summary = data?.choices?.[0]?.message?.content?.trim();
+    if (!summary) throw new ApiError(`${provider.name} returned an empty answer. Try again.`, 502);
+    return summary;
+  }
+
+  return {
+    community: true,
+
+    /** True once a summary can be made (a key, or a local model). */
+    ready: () => {
+      const provider = llm();
+      return Boolean(provider.key || provider.local);
+    },
+
+    /** True when the ElevenLabs voice can be used (otherwise the free computer voice reads). */
+    hasCloudVoice: () => keys.has('ELEVENLABS_API_KEY'),
+
+    async usage() {
+      return { plan: 'community', voiceUsed: 0, voiceLimit: 0 };
+    },
+
+    async checkout() {
+      throw new ApiError('Notchman Pro is at notchman.app.', 400);
+    },
+
+    /** @returns {Promise<string>} the spoken summary */
+    async tldr(text) {
+      return complete(text);
+    },
+
+    /** @returns {Promise<Buffer>} MP3 audio of one piece (ElevenLabs). */
+    async speak({ text, previousText, nextText, voiceId }) {
+      const key = keys.get('ELEVENLABS_API_KEY');
+      if (!key) throw new ApiError('Add an ElevenLabs API key in Settings to use these voices.', 401);
+      let response;
+      try {
+        response = await fetchImpl(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+          method: 'POST',
+          headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_flash_v2_5',
+            ...(previousText ? { previous_text: previousText } : {}),
+            ...(nextText ? { next_text: nextText } : {}),
+          }),
+          signal: AbortSignal.timeout(30_000),
+        });
+      } catch {
+        throw new ApiError("Couldn't reach ElevenLabs. Check your connection.", 0);
+      }
+      if (!response.ok) {
+        const reason = response.status === 401 ? "ElevenLabs didn't accept your API key." : `ElevenLabs returned ${response.status}.`;
+        throw new ApiError(reason, response.status);
+      }
+      return Buffer.from(await response.arrayBuffer());
+    },
+  };
+}
+
+module.exports = { createClient, ApiError, wordLimit };
