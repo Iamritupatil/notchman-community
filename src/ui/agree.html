@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>Welcome to Notchman</title>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="agree.css">
+</head>
+<body>
+  <main>
+    <span class="shiba" id="shibaArt"></span>
+    <h1 class="title-1">Welcome to Notchman</h1>
+    <p class="muted">Read less. Listen instead.</p>
+
+    <ul class="card list facts" id="rows">
+      <li><i data-icon="tldr"></i>Groq writes the TL;DR</li>
+      <li><i data-icon="wave"></i>ElevenLabs speaks it</li>
+      <li><i data-icon="lock"></i>Your text isn't stored</li>
+    </ul>
+    <ul class="card list facts gone" id="communityRows">
+      <li><i data-icon="tldr"></i>Your text goes only to the AI services you set up</li>
+      <li><i data-icon="lock"></i>Nothing is sent to Notchman</li>
+    </ul>
+
+    <label class="card agree" id="agreeBox">
+      <input type="checkbox" id="agree">
+      <span class="tick" aria-hidden="true"></span>
+      <span>I agree to the <a href="https://notchman.app/terms" target="_blank">Terms of Service</a> and <a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a></span>
+    </label>
+
+    <button class="btn btn-primary continue" id="continue" disabled>Continue</button>
+    <button class="btn btn-ghost quit" id="quit">Quit</button>
+  </main>
+  <script src="icons.js"></script>
+  <script src="shiba.js"></script>
+  <script src="agree.js"></script>
+</body>
+</html>

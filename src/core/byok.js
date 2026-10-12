@@ -54,9 +54,9 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
   async function complete(text) {
     const provider = llm();
     if (!provider.key && !provider.local) {
-      throw new ApiError('Add your free Groq API key in Settings to make TL;DRs.', 401);
+      throw new ApiError('Notchman isn\'t set up yet. In its folder, run: npm run setup', 401);
     }
-    if (!provider.model) throw new ApiError('Set LLM_MODEL for your AI provider in Settings.', 400);
+    if (!provider.model) throw new ApiError('Notchman\'s AI service isn\'t fully set up. In its folder, run: npm run setup', 400);
     let response;
     try {
       response = await fetchImpl(`${provider.base}/chat/completions`, {
@@ -78,7 +78,7 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
     }
     const data = await response.json().catch(() => ({}));
     if (response.status === 401 || response.status === 403) {
-      throw new ApiError(`${provider.name} didn't accept your API key. Check it in Settings.`, response.status);
+      throw new ApiError(`${provider.name} turned down Notchman's setup. In its folder, run: npm run setup`, response.status);
     }
     if (response.status === 429) {
       throw new ApiError(`${provider.name}'s rate limit is reached for now. Try again in a minute.`, 429);
@@ -119,7 +119,7 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
     /** @returns {Promise<Buffer>} MP3 audio of one piece (ElevenLabs). */
     async speak({ text, previousText, nextText, voiceId }) {
       const key = keys.get('ELEVENLABS_API_KEY');
-      if (!key) throw new ApiError('Add an ElevenLabs API key in Settings to use these voices.', 401);
+      if (!key) throw new ApiError('Natural voices aren\'t set up. In Notchman\'s folder, run: npm run setup', 401);
       let response;
       try {
         response = await fetchImpl(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
@@ -137,7 +137,7 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
         throw new ApiError("Couldn't reach ElevenLabs. Check your connection.", 0);
       }
       if (!response.ok) {
-        const reason = response.status === 401 ? "ElevenLabs didn't accept your API key." : `ElevenLabs returned ${response.status}.`;
+        const reason = response.status === 401 ? "ElevenLabs turned down Notchman's setup. In its folder, run: npm run setup" : `ElevenLabs returned ${response.status}.`;
         throw new ApiError(reason, response.status);
       }
       return Buffer.from(await response.arrayBuffer());

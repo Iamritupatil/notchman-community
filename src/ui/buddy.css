@@ -1,52 +1,47 @@
-/* The floating Shiba: just its face. Click for TL;DR / Read / Pick on screen
-   (three equal liquid-glass buttons); drag to move it anywhere. */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; }
+/* The floating Shiba: just its face. Click it for a small menu (TL;DR, Read
+   aloud, Pick on screen); drag it anywhere. */
+html, body { background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
 
 /* The Shiba keeps its exact spot on screen; the menu sits beside it, aligned
    to its top, middle or bottom so it always stays on screen (set by main). */
-.buddy { position: absolute; inset: 0; display: flex; align-items: flex-start; gap: 10px; padding: 6px; }
+.buddy { position: absolute; inset: 0; display: flex; align-items: flex-start; gap: 6px; padding: 8px 6px; }
 .buddy.v-center { align-items: center; }
 .buddy.v-bottom { align-items: flex-end; }
 .buddy.left { flex-direction: row-reverse; }
 
 .shiba {
-  position: relative; width: 76px; height: 70px; flex: none; border: 0; background: none; cursor: grab;
-  display: grid; place-items: center;
-  transition: transform 160ms cubic-bezier(.2, .8, .2, 1);
+  position: relative; width: 76px; height: 66px; flex: none; border: 0; background: none; cursor: grab;
+  display: grid; place-items: center; transition: transform 160ms cubic-bezier(.2, .8, .2, 1);
 }
 .shiba:active { cursor: grabbing; }
-.shiba:hover { transform: translateY(-2px) scale(1.04); }
-.shiba img { width: 68px; height: auto; image-rendering: pixelated; pointer-events: none; }
-.buddy.speaking .shiba img { animation: bob 800ms ease-in-out infinite; }
-.buddy.busy .shiba img { animation: think 1.2s ease-in-out infinite; }
-@keyframes bob { 50% { transform: translateY(-3px) rotate(-3deg); } }
-@keyframes think { 50% { transform: rotate(6deg); opacity: .8; } }
+.shiba:hover { transform: translateY(-2px); }
+.shiba .shiba-sprite { pointer-events: none; }
+/* It looks up and bobs gently while a TL;DR is being made. */
+.buddy.busy .shiba .shiba-sprite { animation: bob 1.2s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-2px); } }
 
-.menu { width: 176px; display: flex; flex-direction: column; gap: 6px; opacity: 0; transform: translateX(-8px) scale(.96);
-  pointer-events: none; transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, .8, .2, 1); }
-.buddy.left .menu { transform: translateX(8px) scale(.96); }
+/* The menu: one white card with three rows, like a system menu. Its shadow is
+   small so it stays inside the window (a cut-off shadow shows as a box). */
+.menu {
+  width: 194px; padding: 5px; display: grid; gap: 1px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line-strong);
+  box-shadow: 0 1px 2px rgba(11, 31, 68, 0.1), 0 3px 8px rgba(11, 31, 68, 0.1);
+  opacity: 0; transform: translateX(-6px) scale(0.97); transform-origin: left center; pointer-events: none;
+  transition: opacity 140ms ease, transform 180ms cubic-bezier(.2, .8, .2, 1);
+}
+.buddy.left .menu { transform: translateX(6px) scale(0.97); transform-origin: right center; }
 .buddy.open .menu { opacity: 1; transform: none; pointer-events: auto; }
 
-/* Liquid glass: one size and shape for every button. No drop shadow: the
-   window is only as big as the menu, so a shadow would be cut off at its
-   edges and show as a grey box. A crisp edge gives the depth instead. */
-.glass {
-  width: 100%; height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 999px;
-  cursor: pointer; color: #0b1f44; font-size: 13.5px; font-weight: 600; text-align: left; white-space: nowrap;
-  background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(228,241,255,.94));
-  border: 1px solid rgba(90, 140, 210, .45);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -6px 12px rgba(120,170,230,.16);
-  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+.item {
+  display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 8px;
+  background: none; color: var(--ink); font-size: 13px; font-weight: 500; text-align: left; cursor: pointer;
 }
-.glass:hover { transform: translateY(-1px); border-color: rgba(27, 116, 228, .7);
-  background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(215,234,255,.85)); }
-.glass .icon { width: 16px; text-align: center; color: #1b74e4; font-size: 13px; }
-.glass.primary { background: linear-gradient(180deg, rgba(110,185,255,.95), rgba(27,116,228,.92)); color: #fff; border-color: rgba(20, 95, 200, .85); }
-.glass.primary:hover { background: linear-gradient(180deg, rgba(125,195,255,1), rgba(35,125,235,1)); border-color: rgba(20, 95, 200, 1); }
-.glass.primary .icon { color: #fff; }
+.item:hover { background: var(--accent-soft); }
+.item .icon { color: var(--accent); width: 17px; height: 17px; }
+.item .label { flex: 1; white-space: nowrap; }
+.item .hint { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
+.item .pro { display: none; }
 
 /* Community edition: Pick on screen is a Pro feature. */
-.glass .pro { display: none; margin-left: auto; padding: 1px 6px; border-radius: 6px; background: #1b74e4; color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
-.buddy.community .glass .pro { display: inline-block; }
+.buddy.community .item .pro { display: inline-flex; }
+.buddy.community #pick .icon, .buddy.community #pick .label { opacity: 0.6; }

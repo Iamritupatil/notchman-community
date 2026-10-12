@@ -1,0 +1,19 @@
+/* The agreement every user accepts before first use. Tokens: theme.css. */
+body { min-height: 100vh; display: grid; place-items: center; padding: 28px; background: var(--sky); user-select: none; }
+main { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.shiba { margin-bottom: 4px; }
+main > .muted { margin-top: -6px; }
+.facts { width: 100%; margin-top: 10px; text-align: left; }
+.facts li { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-weight: 500; }
+.facts .icon { color: var(--accent); }
+.agree { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; text-align: left; cursor: pointer;
+  transition: border-color 120ms ease; }
+.agree.checked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow-card); }
+.agree input { position: absolute; opacity: 0; pointer-events: none; }
+.tick { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center;
+  transition: background-color 150ms ease, border-color 150ms ease; }
+.agree.checked .tick { background: var(--accent); border-color: var(--accent); }
+.agree.checked .tick::after { content: ""; width: 6px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+.agree input:focus-visible + .tick { outline: 2px solid var(--accent); outline-offset: 2px; }
+.continue { width: 100%; height: 40px; margin-top: 6px; font-size: 14px; }
+.quit { color: var(--ink-2); }

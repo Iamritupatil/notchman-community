@@ -4,27 +4,28 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' blob:; img-src 'self' data:; style-src 'self'; script-src 'self'">
   <title>Notchman</title>
-  <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
-<body class="dashboard">
+<body>
   <nav class="sidebar">
     <div class="brand"><img src="../../assets/shiba-face.png" alt=""><span>Notchman</span></div>
-    <button class="tab" data-tab="home"><span class="ico">⌂</span>Home</button>
-    <button class="tab" data-tab="history"><span class="ico">↺</span>History</button>
-    <button class="tab" data-tab="plan"><span class="ico">★</span>Plan</button>
-    <button class="tab" data-tab="settings"><span class="ico">⚙</span>Settings</button>
-    <button class="tab" data-tab="about"><span class="ico">ⓘ</span>About &amp; updates<span class="dot gone" id="updateDot"></span></button>
+    <button class="nav-item" data-tab="home"><i data-icon="home"></i><span>Home</span></button>
+    <button class="nav-item" data-tab="history"><i data-icon="history"></i><span>History</span></button>
+    <button class="nav-item" data-tab="plan"><i data-icon="plan"></i><span>Plan</span></button>
+    <button class="nav-item" data-tab="settings"><i data-icon="settings"></i><span>Settings</span></button>
+    <button class="nav-item" data-tab="about"><i data-icon="info"></i><span>About</span><span class="dot gone" id="updateDot"></span></button>
     <div class="spacer"></div>
     <div class="side-card community-only">
-      <div class="plan-chip">Community</div>
-      <p class="muted small-note">Free for personal use, with your own API keys.</p>
-      <button class="primary small" data-action="pro">Get Notchman Pro</button>
+      <div class="side-title">Community edition</div>
+      <p class="caption">Free for personal, non-commercial use.</p>
+      <button class="btn btn-secondary btn-sm btn-block" data-action="pro">Get Notchman Pro</button>
     </div>
     <div class="side-card pro-only">
-      <div class="plan-chip" id="planChip">Free</div>
-      <div class="side-voice"><div class="meter"><div id="sideMeter"></div></div><span id="sideVoice">Notchman voice</span></div>
-      <button class="primary small" data-goto="plan" id="sideUpgrade">Upgrade</button>
+      <div class="side-title" id="planChip">Free plan</div>
+      <div class="meter"><div id="sideMeter"></div></div>
+      <p class="caption" id="sideVoice">Notchman voice</p>
+      <button class="btn btn-primary btn-sm btn-block" data-goto="plan" id="sideUpgrade">Upgrade</button>
     </div>
   </nav>
 
@@ -32,165 +33,210 @@
     <!-- Home -->
     <section class="panel" data-panel="home">
       <div class="banner gone" id="updateBanner">
+        <i data-icon="download"></i>
         <span id="updateText">A new version of Notchman is ready.</span>
-        <button class="primary small" id="bannerInstall">Update now</button>
+        <button class="btn btn-primary btn-sm" id="bannerInstall">Update now</button>
       </div>
-      <header class="page-head">
-        <div>
-          <h1 id="greeting">Hi there!</h1>
-          <p class="lead">Select or copy anything, then press <kbd id="homeTldrKey">Alt+T</kbd> for a TL;DR or <kbd id="homeReadKey">Alt+R</kbd> to hear it in full. Or click the Shiba.</p>
+      <header class="page-head"><h1 class="title-1">Home</h1></header>
+
+      <div class="card hero">
+        <span class="hero-shiba" id="heroShiba"></span>
+        <div class="hero-text">
+          <h2 class="title-2">Select text anywhere, then press <kbd id="homeTldrKey">Alt+T</kbd></h2>
+          <p class="muted">You hear the TL;DR while you keep working. <kbd id="homeReadKey">Alt+R</kbd> reads every word.</p>
         </div>
-      </header>
+      </div>
 
       <div class="actions">
-        <button class="action" data-action="tldr"><span class="big-ico">⚡</span><b>TL;DR what I copied</b><small>The short version, read aloud</small></button>
-        <button class="action" data-action="read"><span class="big-ico">🔊</span><b>Read what I copied</b><small>Every word, in the free voice</small></button>
-        <button class="action" data-action="pick"><span class="big-ico">⌖</span><b>Pick on screen <span class="pro-badge community-only">PRO</span></b><small>Choose a paragraph anywhere</small></button>
+        <button class="card action" data-action="tldr">
+          <span class="action-icon"><i data-icon="tldr"></i></span>
+          <span class="action-text"><b>TL;DR</b><span class="caption">What you selected or copied</span></span>
+        </button>
+        <button class="card action" data-action="read">
+          <span class="action-icon"><i data-icon="read"></i></span>
+          <span class="action-text"><b>Read aloud</b><span class="caption">Every word of it</span></span>
+        </button>
+        <button class="card action" data-action="pick">
+          <span class="action-icon"><i data-icon="pick"></i></span>
+          <span class="action-text"><b>Pick on screen <span class="tag community-only">Pro</span></b><span class="caption">Any paragraph you can see</span></span>
+        </button>
       </div>
 
-      <div class="stats">
-        <div class="card stat"><h2>Listens</h2><div class="big" id="statListens">0</div><p class="muted">on this computer</p></div>
-        <div class="card stat"><h2>Minutes heard</h2><div class="big" id="statMinutes">0</div><p class="muted">while you kept working</p></div>
-        <div class="card stat"><h2>Reading saved</h2><div class="big" id="statSaved">0 min</div><p class="muted">thanks to TL;DRs</p></div>
-        <div class="card stat pro-only"><h2>Notchman voice</h2><div class="big" id="voiceCount">–</div><div class="meter"><div id="voiceMeter"></div></div><p class="muted" id="voiceNote">Loading your plan…</p></div>
+      <div class="card stats">
+        <div class="stat"><span class="stat-value" id="statListens">0</span><span class="caption">Listens</span></div>
+        <div class="stat"><span class="stat-value" id="statMinutes">0</span><span class="caption">Minutes heard</span></div>
+        <div class="stat"><span class="stat-value" id="statSaved">0 min</span><span class="caption">Reading saved</span></div>
+        <div class="stat pro-only">
+          <span class="stat-value" id="voiceCount">–</span>
+          <span class="caption" id="voiceNote">Notchman voice left</span>
+          <div class="meter"><div id="voiceMeter"></div></div>
+        </div>
       </div>
 
       <div class="card">
-        <div class="row-between"><h2>Recent</h2><button class="link" data-goto="history">See all</button></div>
-        <ul class="history" id="recent"></ul>
+        <div class="card-head"><h2 class="title-2">Recent</h2><button class="btn btn-ghost btn-sm" data-goto="history">See all</button></div>
+        <ul class="list history" id="recent"></ul>
       </div>
     </section>
 
     <!-- History -->
     <section class="panel" data-panel="history">
-      <header class="page-head row-between">
-        <div><h1>History</h1><p class="lead">Everything you've listened to on this computer. Replaying doesn't use your allowance again.</p></div>
-        <button class="link danger" id="clearHistory">Clear all</button>
+      <header class="page-head with-action">
+        <div>
+          <h1 class="title-1">History</h1>
+          <p class="muted" id="historyLead">Everything you've listened to on this computer. Replays don't count toward your plan.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm danger" id="clearHistory">Clear all</button>
       </header>
-      <input class="search" id="search" type="search" placeholder="Search your history">
+      <label class="search"><i data-icon="search"></i><input id="search" type="search" placeholder="Search history"></label>
       <div class="split">
-        <ul class="history card list" id="history"></ul>
-        <article class="card detail" id="detail">
-          <p class="muted">Choose something on the left to see what was said.</p>
-        </article>
+        <ul class="card list history scroll" id="history"></ul>
+        <article class="card detail scroll" id="detail"></article>
       </div>
     </section>
 
     <!-- Plan -->
     <section class="panel" data-panel="plan">
-      <header class="page-head"><h1>Your plan</h1><p class="lead" id="planLead">Loading…</p></header>
-      <div class="card community-only">
-        <h2>Notchman Community</h2>
-        <p class="muted">You're running the free Community edition (personal, non-commercial use): TL;DRs and reading with your own API keys, straight from this computer to Groq and ElevenLabs. No account, no limits from us.</p>
-        <h2 class="gap-top">Notchman Pro adds</h2>
-        <ul class="pro-list">
-          <li><b>Pick on screen</b>: click the Shiba and choose any paragraph on screen, no copying.</li>
-          <li><b>No API keys</b>: the Notchman cloud makes the TL;DR and the natural voice for you.</li>
-          <li><b>Better TL;DRs</b>: a multi-step summary that checks nothing important was left out.</li>
-          <li><b>iPhone app</b> and automatic updates.</li>
+      <header class="page-head"><h1 class="title-1">Plan</h1><p class="muted" id="planLead">Loading…</p></header>
+      <div class="card card-pad community-only">
+        <h2 class="title-2">Notchman Community</h2>
+        <p class="muted gap-sm">Free for personal, non-commercial use. TL;DRs and reading run straight from this computer. No account and no limits from us.</p>
+        <h3 class="subhead">Notchman Pro adds</h3>
+        <ul class="checks">
+          <li><i data-icon="check"></i><span><b>Pick on screen.</b> Click the Shiba and choose any paragraph, without copying.</span></li>
+          <li><i data-icon="check"></i><span><b>Nothing to set up.</b> The Notchman cloud makes the TL;DR and the natural voice.</span></li>
+          <li><i data-icon="check"></i><span><b>Checked TL;DRs.</b> A second pass makes sure nothing important was left out.</span></li>
+          <li><i data-icon="check"></i><span><b>iPhone app</b> and automatic updates.</span></li>
         </ul>
-        <button class="primary" data-action="pro">Get Notchman Pro at notchman.app</button>
+        <button class="btn btn-primary" data-action="pro">Get Notchman Pro<i data-icon="external"></i></button>
       </div>
-      <div class="cards plans pro-only">
+      <div class="plans pro-only">
         <div class="card plan" data-plan="free">
-          <h2>Free</h2>
-          <div class="price">Free forever</div>
-          <ul>
-            <li>5 TL;DRs a day</li>
-            <li>Notchman voice preview (2,500 characters)</li>
-            <li>Unlimited free voice on your computer</li>
+          <h2 class="title-2">Free</h2>
+          <div class="price"><b>$0</b></div>
+          <ul class="checks">
+            <li><i data-icon="check"></i><span>5 TL;DRs a day</span></li>
+            <li><i data-icon="check"></i><span>Notchman voice preview (2,500 characters)</span></li>
+            <li><i data-icon="check"></i><span>Unlimited free voice on your computer</span></li>
           </ul>
-          <button class="secondary" disabled>Included</button>
+          <button class="btn btn-secondary" disabled>Included</button>
         </div>
         <div class="card plan" data-plan="pro">
-          <h2>Pro</h2>
-          <div class="price">$4.99 / month</div>
-          <ul>
-            <li>25,000 characters a month in the Notchman voice (about 28 minutes)</li>
-            <li>Natural ElevenLabs voices, faster start</li>
-            <li>After that, the standard natural voice, unlimited</li>
+          <h2 class="title-2">Pro</h2>
+          <div class="price"><b>$4.99</b> / month</div>
+          <ul class="checks">
+            <li><i data-icon="check"></i><span>About 28 min of Notchman voice a month</span></li>
+            <li><i data-icon="check"></i><span>Natural voices, faster start</span></li>
+            <li><i data-icon="check"></i><span>Then the standard voice, unlimited</span></li>
           </ul>
-          <button class="primary" data-upgrade="pro">Upgrade to Pro</button>
+          <button class="btn btn-primary" data-upgrade="pro">Upgrade to Pro</button>
         </div>
         <div class="card plan best" data-plan="proplus">
-          <span class="badge">Best value</span>
-          <h2>Pro+</h2>
-          <div class="price">$9.99 / month</div>
-          <ul>
-            <li>60,000 characters a month in the Notchman voice (about 1 hour 7 minutes)</li>
-            <li>Enough for full reads in the Notchman voice</li>
-            <li>Everything in Pro</li>
+          <span class="tag best-tag">Best value</span>
+          <h2 class="title-2">Pro+</h2>
+          <div class="price"><b>$9.99</b> / month</div>
+          <ul class="checks">
+            <li><i data-icon="check"></i><span>About 67 min of Notchman voice a month</span></li>
+            <li><i data-icon="check"></i><span>Enough for full reads</span></li>
+            <li><i data-icon="check"></i><span>Everything in Pro</span></li>
           </ul>
-          <button class="primary" data-upgrade="proplus">Upgrade to Pro+</button>
+          <button class="btn btn-primary" data-upgrade="proplus">Upgrade to Pro+</button>
         </div>
       </div>
-      <div class="card pro-only">
-        <p class="muted">Checkout opens in your browser; the price shown there includes any tax. Your plan is linked to this computer and appears here a moment after you pay. Subscriptions renew automatically until cancelled; cancel anytime from your receipt email. By upgrading you agree to the <a href="https://notchman.app/terms" target="_blank">Terms of Service</a> and <a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a>.</p>
-        <button class="secondary" id="refreshPlan">I've paid: refresh</button>
-      </div>
+      <p class="caption fine-print pro-only">Checkout opens in your browser; the price there includes any tax. Your plan is linked to this computer and shows here a moment after you pay. Subscriptions renew monthly until you cancel, from your receipt email. By upgrading you agree to the <a href="https://notchman.app/terms" target="_blank">Terms of Service</a> and <a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a>.</p>
+      <button class="btn btn-secondary btn-sm pro-only" id="refreshPlan">I've paid: refresh</button>
     </section>
 
     <!-- Settings (settings.js) -->
     <section class="panel" data-panel="settings">
-      <header class="page-head"><h1>Settings</h1><p class="lead">Press <kbd id="tldrKeyLabel">Alt+T</kbd> for a TL;DR anywhere.</p></header>
-      <div class="card community-only keys-card">
-        <h2>Your API keys</h2>
-        <p class="muted">Saved encrypted on this computer and sent only to the provider they belong to. Get a free Groq key at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>.</p>
-        <label class="key-row"><span>Groq API key <b>(needed)</b></span><input type="password" id="key-GROQ_API_KEY" placeholder="gsk_…" autocomplete="off" spellcheck="false"><small id="src-GROQ_API_KEY"></small></label>
-        <label class="key-row"><span>ElevenLabs API key (optional: natural voices; without it the free voice on your computer reads)</span><input type="password" id="key-ELEVENLABS_API_KEY" placeholder="sk_…" autocomplete="off" spellcheck="false"><small id="src-ELEVENLABS_API_KEY"></small></label>
-        <details>
-          <summary>Use another AI provider (OpenAI, OpenRouter, Ollama…)</summary>
-          <label class="key-row"><span>Base URL (OpenAI-compatible)</span><input type="text" id="key-LLM_BASE_URL" placeholder="http://localhost:11434/v1" autocomplete="off" spellcheck="false"><small id="src-LLM_BASE_URL"></small></label>
-          <label class="key-row"><span>Model</span><input type="text" id="key-LLM_MODEL" placeholder="llama3.1" autocomplete="off" spellcheck="false"><small id="src-LLM_MODEL"></small></label>
-          <label class="key-row"><span>API key (not needed for a local Ollama)</span><input type="password" id="key-LLM_API_KEY" autocomplete="off" spellcheck="false"><small id="src-LLM_API_KEY"></small></label>
-        </details>
-        <div class="row-between"><span class="muted" id="keysStatus"></span><button class="primary" id="saveKeys">Save keys</button></div>
+      <header class="page-head"><h1 class="title-1">Settings</h1></header>
+
+      <div class="group">
+        <h2 class="group-title">Voice</h2>
+        <div class="card list voices" id="voices"></div>
       </div>
-      <div class="card"><h2>Voice</h2><div id="voices" class="voices grid"></div></div>
-      <div class="two">
-        <div class="card"><h2>Speed</h2><div class="segmented" id="speeds"></div></div>
-        <div class="card">
-          <h2>Shortcuts</h2>
-          <label class="row">TL;DR <select id="tldrShortcut"></select></label>
-          <label class="row">Read in full <select id="readShortcut"></select></label>
+
+      <div class="group">
+        <h2 class="group-title">Listening</h2>
+        <div class="card list">
+          <div class="row"><span>Speed</span><div class="segmented" id="speeds"></div></div>
+          <label class="row"><span>TL;DR shortcut</span><select class="select" id="tldrShortcut"></select></label>
+          <label class="row"><span>Read in full shortcut</span><select class="select" id="readShortcut"></select></label>
         </div>
       </div>
-      <div class="card"><label class="row check"><input type="checkbox" id="openAtLogin"> Start Notchman when the computer starts</label></div>
-      <div class="card community-only">
-        <h2>Privacy</h2>
-        <p class="muted">Everything stays on this computer. Text you TL;DR goes straight from here to Groq (or your AI provider) and, if you added a key, to ElevenLabs, with your own keys. Notchman has no server in this edition.</p>
+
+      <div class="group">
+        <h2 class="group-title">General</h2>
+        <div class="card list">
+          <label class="row"><span>Show the Shiba on screen</span><span class="switch"><input type="checkbox" id="showBuddy"><span></span></span></label>
+          <label class="row" id="openAtLoginRow"><span>Open Notchman when you sign in</span><span class="switch"><input type="checkbox" id="openAtLogin"><span></span></span></label>
+        </div>
       </div>
-      <div class="card legal-links pro-only">
-        <h2>Privacy</h2>
-        <p class="muted">History, screen reading and the free voice stay on this computer. Text you TL;DR goes to Groq (summary) and to ElevenLabs or Microsoft Azure (voice) only to make your audio.</p>
-        <p class="muted">Install ID (quote it in privacy requests): <code id="installId"></code></p>
-        <p><a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a> · <a href="https://notchman.app/terms" target="_blank">Terms of Service</a></p>
+
+      <div class="group">
+        <h2 class="group-title">Privacy</h2>
+        <div class="card card-pad">
+          <p class="muted community-only">Everything stays on this computer. Text you TL;DR goes straight from here to Groq (or the AI service you set up) and, for natural voices, to ElevenLabs. Notchman has no server in this edition.</p>
+          <p class="muted pro-only">History, screen reading and the free voice stay on this computer. Text you TL;DR goes to Groq for the summary and to ElevenLabs or Microsoft Azure for the voice, only to make your audio.</p>
+          <p class="caption gap-sm pro-only">Install ID, for privacy requests: <code id="installId"></code></p>
+          <p class="links"><a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a><a href="https://notchman.app/terms" target="_blank">Terms of Service</a></p>
+        </div>
       </div>
     </section>
 
-    <!-- About & updates -->
+    <!-- About -->
     <section class="panel" data-panel="about">
-      <header class="page-head"><h1>About &amp; updates</h1><p class="lead">Notchman for <span id="platformName">your computer</span>.</p></header>
-      <div class="card update-card">
-        <div>
-          <h2>Version</h2>
-          <div class="big" id="versionNumber">–</div>
-          <p class="muted" id="updateStatus">Checking for updates…</p>
-        </div>
-        <div class="update-buttons pro-only">
-          <button class="primary gone" id="installUpdate">Update now</button>
-          <button class="secondary" id="checkUpdate">Check for updates</button>
+      <header class="page-head"><h1 class="title-1">About</h1></header>
+
+      <div class="group">
+        <div class="card list">
+          <div class="row">
+            <div class="row-text">
+              <span class="row-title">Notchman <span id="versionNumber"></span></span>
+              <span class="caption" id="updateStatus">Checking for updates…</span>
+            </div>
+            <div class="row-actions pro-only">
+              <button class="btn btn-primary btn-sm gone" id="installUpdate">Update now</button>
+              <button class="btn btn-secondary btn-sm" id="checkUpdate">Check for updates</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="card">
-        <h2>Help</h2>
-        <p class="muted community-only">Notchman Community is free for personal, non-commercial use (see LICENSE and NOTICE.md); for work or business use, get Notchman Pro. Report bugs and ideas on GitHub; to update, run <code>git pull</code> and <code>npm install</code> in its folder.</p>
-        <p class="muted pro-only">Questions or something not working? Email <a href="mailto:ritu@miniclayai.com">ritu@miniclayai.com</a>. Notchman is also on iPhone: <a href="https://notchman.app" target="_blank">notchman.app</a>.</p>
+
+      <div class="group">
+        <h2 class="group-title">Help</h2>
+        <div class="card card-pad">
+          <p class="muted community-only">Notchman Community is free for personal, non-commercial use (see LICENSE and NOTICE.md). For work or business use, get Notchman Pro. Report bugs and ideas on GitHub. To update, run <code>git pull</code> and then <code>npm install</code> in its folder.</p>
+          <p class="muted pro-only">Questions, or something not working? Email <a href="mailto:ritu@miniclayai.com">ritu@miniclayai.com</a>. Notchman is also on iPhone: <a href="https://notchman.app" target="_blank">notchman.app</a>.</p>
+        </div>
       </div>
-      <footer id="version"></footer>
+
+      <div class="group">
+        <h2 class="group-title">Uninstall</h2>
+        <div class="card list">
+          <div class="row">
+            <div class="row-text">
+              <span class="row-title">Uninstall Notchman</span>
+              <span class="caption" id="uninstallNote">Removes Notchman and its history and settings from this computer.</span>
+            </div>
+            <button class="btn btn-danger btn-sm" id="uninstall">Uninstall…</button>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
+  <dialog class="sheet" id="sheet">
+    <h2 id="sheetTitle"></h2>
+    <div id="sheetBody"></div>
+    <div class="sheet-buttons">
+      <button class="btn btn-secondary" id="sheetCancel">Cancel</button>
+      <button class="btn btn-primary" id="sheetConfirm">OK</button>
+    </div>
+  </dialog>
+
+  <script src="icons.js"></script>
+  <script src="shiba.js"></script>
   <script src="settings.js"></script>
   <script src="dashboard.js"></script>
 </body>

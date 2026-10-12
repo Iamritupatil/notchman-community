@@ -8,6 +8,9 @@
   "homepage": "https://notchman.app",
   "main": "src/main.js",
   "scripts": {
+    "postinstall": "node scripts/setup.js --install",
+    "prestart": "node scripts/setup.js --check",
+    "setup": "node scripts/setup.js",
     "start": "electron .",
     "test": "node --test test/core.test.js test/community.test.js",
     "dist": "electron-builder --win --publish never",
@@ -52,6 +55,16 @@
       "createDesktopShortcut": false,
       "createStartMenuShortcut": true,
       "shortcutName": "Notchman Community"
+    },
+    "appx": {
+      "applicationId": "Notchman",
+      "displayName": "Notchman",
+      "backgroundColor": "#EAF6FF",
+      "languages": [
+        "en-US"
+      ],
+      "addAutoLaunchExtension": true,
+      "artifactName": "Notchman-Store.${ext}"
     },
     "mac": {
       "target": [

@@ -12,18 +12,20 @@ const { createClient, ApiError, wordLimit } = require('../src/core/byok');
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'notchman-keys-'));
 
-test('keys come from the environment, then .env, then Settings; values are never described', () => {
+test('keys come only from the environment or a .env file (never the app); values are never described', () => {
   const dir = tmp();
-  fs.writeFileSync(path.join(dir, '.env'), '# comment\nGROQ_API_KEY="gsk_from_env_file"\nELEVENLABS_API_KEY=el_file\n');
-  const keys = createKeyStore({ directory: dir, dotEnv: path.join(dir, '.env'), env: { ELEVENLABS_API_KEY: 'el_env' } });
+  const dotEnv = path.join(dir, '.env');
+  fs.writeFileSync(dotEnv, '# comment\nGROQ_API_KEY="gsk_from_env_file"\nELEVENLABS_API_KEY=el_file\n');
+  const keys = createKeyStore({ dotEnv, env: { ELEVENLABS_API_KEY: 'el_env' } });
   assert.equal(keys.get('GROQ_API_KEY'), 'gsk_from_env_file');
   assert.equal(keys.get('ELEVENLABS_API_KEY'), 'el_env');
-  keys.set('LLM_MODEL', 'llama3.1');
+  assert.equal(keys.set, undefined, 'there is no way to save a key from the app');
   const described = keys.describe();
-  assert.deepEqual([described.GROQ_API_KEY, described.ELEVENLABS_API_KEY, described.LLM_MODEL], ['.env file', 'environment', 'saved']);
+  assert.deepEqual([described.GROQ_API_KEY, described.ELEVENLABS_API_KEY, described.LLM_MODEL], ['.env file', 'environment', null]);
   assert.ok(!JSON.stringify(described).includes('gsk_from_env_file'));
-  // Saved keys survive a restart.
-  assert.equal(createKeyStore({ directory: dir, env: {} }).get('LLM_MODEL'), 'llama3.1');
+  // Editing .env takes effect without a restart.
+  fs.writeFileSync(dotEnv, 'GROQ_API_KEY=gsk_edited\n');
+  assert.equal(keys.get('GROQ_API_KEY'), 'gsk_edited');
   assert.deepEqual(readDotEnv(path.join(dir, 'missing')), {});
 });
 
@@ -33,7 +35,7 @@ test('a TL;DR goes straight to Groq with your key', async () => {
     calls.push({ url, init });
     return new Response(JSON.stringify({ choices: [{ message: { content: 'The short version.' } }] }));
   };
-  const keys = createKeyStore({ directory: tmp(), env: { GROQ_API_KEY: 'gsk_test' } });
+  const keys = createKeyStore({ env: { GROQ_API_KEY: 'gsk_test' } });
   const client = createClient({ keys, fetch });
   assert.equal(client.ready(), true);
   assert.equal(await client.tldr('Lunch moved to Friday at one. Bring the slides and the budget numbers.'), 'The short version.');
@@ -43,21 +45,21 @@ test('a TL;DR goes straight to Groq with your key', async () => {
 });
 
 test('without a key, or with a wrong one, the message says what to do', async () => {
-  const none = createClient({ keys: createKeyStore({ directory: tmp(), env: {} }), fetch: async () => { throw new Error('no call'); } });
+  const none = createClient({ keys: createKeyStore({ env: {} }), fetch: async () => { throw new Error('no call'); } });
   assert.equal(none.ready(), false);
-  await assert.rejects(none.tldr('text'), (e) => e instanceof ApiError && /Groq API key in Settings/.test(e.message));
+  await assert.rejects(none.tldr('text'), (e) => e instanceof ApiError && /npm run setup/.test(e.message));
   const wrong = createClient({
-    keys: createKeyStore({ directory: tmp(), env: { GROQ_API_KEY: 'bad' } }),
+    keys: createKeyStore({ env: { GROQ_API_KEY: 'bad' } }),
     fetch: async () => new Response('{}', { status: 401 }),
   });
-  await assert.rejects(wrong.tldr('text'), /didn't accept your API key/);
-  await assert.rejects(none.speak({ text: 'hi', voiceId: 'x' }), /ElevenLabs API key/);
+  await assert.rejects(wrong.tldr('text'), /npm run setup/);
+  await assert.rejects(none.speak({ text: 'hi', voiceId: 'x' }), /npm run setup/);
   assert.equal(none.hasCloudVoice(), false);
 });
 
 test('a local OpenAI-compatible model needs no key', async () => {
   const calls = [];
-  const keys = createKeyStore({ directory: tmp(), env: { LLM_BASE_URL: 'http://localhost:11434/v1/', LLM_MODEL: 'llama3.1' } });
+  const keys = createKeyStore({ env: { LLM_BASE_URL: 'http://localhost:11434/v1/', LLM_MODEL: 'llama3.1' } });
   const client = createClient({
     keys,
     fetch: async (url, init) => { calls.push({ url, init }); return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })); },

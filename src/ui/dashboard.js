@@ -1,31 +1,57 @@
 'use strict';
 
-// The Notchman window: Home (quick actions, stats, plan), History (search,
-// full text, replay), Plan (upgrade), About & updates. The Settings tab's
-// controls are drawn by settings.js.
+// The Notchman window: Home (quick actions, stats, recent), History (search,
+// full text, replay), Plan (upgrade), About (updates, help, uninstall). The
+// Settings page's controls are drawn by settings.js.
 
 (() => {
   const $ = (id) => document.getElementById(id);
+  const el = (tag, className, text) => Object.assign(document.createElement(tag), className ? { className } : {}, text != null ? { textContent: text } : {});
   const PLAN_NAMES = { free: 'Free', pro: 'Pro', proplus: 'Pro+' };
   let historyItems = [];
   let selectedId = null;
+  let community = false;
 
   function show(tab) {
-    for (const button of document.querySelectorAll('.tab')) button.classList.toggle('active', button.dataset.tab === tab);
+    for (const button of document.querySelectorAll('.nav-item')) button.classList.toggle('active', button.dataset.tab === tab);
     for (const panel of document.querySelectorAll('.panel')) panel.classList.toggle('active', panel.dataset.panel === tab);
     if (tab === 'home' || tab === 'plan') loadUsage();
     if (tab === 'home' || tab === 'history') loadHistory();
     if (tab === 'about') checkUpdates();
   }
 
-  for (const button of document.querySelectorAll('.tab')) button.addEventListener('click', () => show(button.dataset.tab));
+  for (const button of document.querySelectorAll('.nav-item')) button.addEventListener('click', () => show(button.dataset.tab));
   for (const link of document.querySelectorAll('[data-goto]')) link.addEventListener('click', () => show(link.dataset.goto));
   for (const action of document.querySelectorAll('[data-action]')) {
     action.addEventListener('click', () => window.notchman.dashboardAction(action.dataset.action));
   }
 
-  const hour = new Date().getHours();
-  $('greeting').textContent = hour < 12 ? 'Good morning!' : hour < 18 ? 'Good afternoon!' : 'Good evening!';
+  // --- A small dialog instead of the browser's alert() and confirm() -------------
+
+  /** Resolves true if the person confirms. `cancel: null` shows only one button. */
+  function ask({ title, body, confirm = 'OK', cancel = 'Cancel', danger = false }) {
+    const sheet = $('sheet');
+    $('sheetTitle').textContent = title;
+    $('sheetBody').replaceChildren(...[].concat(body || []).map((text) => el('p', '', text)));
+    $('sheetConfirm').textContent = confirm;
+    $('sheetConfirm').className = `btn ${danger ? 'btn-danger-solid' : 'btn-primary'}`;
+    $('sheetCancel').textContent = cancel || '';
+    $('sheetCancel').classList.toggle('gone', !cancel);
+    sheet.showModal();
+    return new Promise((resolve) => {
+      const done = (answer) => {
+        $('sheetConfirm').onclick = null;
+        $('sheetCancel').onclick = null;
+        sheet.onclose = null;
+        if (sheet.open) sheet.close();
+        resolve(answer);
+      };
+      $('sheetConfirm').onclick = () => done(true);
+      $('sheetCancel').onclick = () => done(false);
+      sheet.onclose = () => done(false);
+    });
+  }
+  const tell = (title, body) => ask({ title, body, cancel: null });
 
   // --- Plan and usage ---------------------------------------------------------
 
@@ -36,12 +62,12 @@
   async function loadUsage() {
     const usage = await window.notchman.usage();
     if (usage.ok && usage.plan === 'community') {
-      $('planLead').textContent = 'Notchman Community: free for personal, non-commercial use, with your own API keys.';
+      $('planLead').textContent = 'Free for personal, non-commercial use.';
       return usage;
     }
     if (!usage.ok) {
-      $('voiceNote').textContent = usage.message || "Couldn't load your plan. Check your connection.";
-      $('planLead').textContent = "Couldn't load your plan right now.";
+      $('voiceNote').textContent = "Couldn't load your plan";
+      $('planLead').textContent = "Couldn't load your plan. Check your connection.";
       $('sideVoice').textContent = "Couldn't load your plan";
       // Usually a moment without internet: try again shortly.
       clearTimeout(loadUsage.retry);
@@ -50,19 +76,18 @@
     }
     const plan = PLAN_NAMES[usage.plan] || 'Free';
     const left = Math.max(0, (usage.voiceLimit || 0) - (usage.voiceUsed || 0));
-    const period = usage.voicePeriod === 'day' ? 'today' : usage.voicePeriod === 'trial' ? 'in your free preview' : 'this month';
+    const period = usage.voicePeriod === 'day' ? 'today' : usage.voicePeriod === 'trial' ? 'in your preview' : 'this month';
     $('planChip').textContent = `${plan} plan`;
     $('sideUpgrade').classList.toggle('gone', usage.plan === 'proplus');
     $('sideMeter').style.width = `${100 - percent(usage.voiceUsed, usage.voiceLimit)}%`;
-    $('sideVoice').textContent = usage.voiceLimit ? `${chars(left)} voice characters left` : 'Free voice';
-    $('voiceCount').textContent = usage.voiceLimit ? chars(left) : '–';
+    $('sideVoice').textContent = usage.voiceLimit ? `About ${minutes(left)} min of Notchman voice left` : 'Free voice on this computer';
+    $('voiceCount').textContent = usage.voiceLimit ? `${minutes(left)} min` : '–';
     $('voiceMeter').style.width = `${100 - percent(usage.voiceUsed, usage.voiceLimit)}%`;
-    $('voiceNote').textContent = usage.voiceLimit
-      ? `characters left ${period} (about ${minutes(left)} min). Then the free voice.`
-      : 'You hear the free voice on your computer. Pro adds the Notchman voice.';
+    $('voiceNote').textContent = usage.voiceLimit ? 'Notchman voice left' : 'Free voice on this computer';
+    $('voiceNote').title = usage.voiceLimit ? `${chars(left)} characters left ${period}` : '';
     $('planLead').textContent = usage.plan === 'free'
-      ? "You're on Free. TL;DRs and reading always work with the free voice on your computer; upgrade for the natural Notchman voice."
-      : `You're on ${plan}: ${chars(left)} Notchman-voice characters left ${period}. Thanks for supporting Notchman!`;
+      ? "You're on Free. TL;DRs always work with the free voice on your computer. Upgrade for the natural Notchman voice."
+      : `You're on ${plan}, with about ${minutes(left)} min of Notchman voice left ${period}.`;
     for (const card of document.querySelectorAll('.plan')) {
       const current = card.dataset.plan === usage.plan;
       card.classList.toggle('current', current);
@@ -74,7 +99,7 @@
   }
 
   // After checkout opens: look every few seconds until the payment shows up
-  // (Dodo tells our server within seconds), then celebrate. Up to 30 minutes.
+  // (Dodo tells our server within seconds). Up to 30 minutes.
   let waiting = null;
   function waitForPayment(plan) {
     clearInterval(waiting);
@@ -85,8 +110,8 @@
       if (usage && usage.ok && (usage.plan === plan || usage.plan === 'proplus')) {
         clearInterval(waiting);
         for (const b of document.querySelectorAll('[data-upgrade]')) b.disabled = false;
-        $('planLead').textContent = `Welcome to Notchman ${PLAN_NAMES[usage.plan]}! The natural Notchman voice is on. Thank you for supporting Notchman.`;
-        new Notification('Welcome to Notchman ' + PLAN_NAMES[usage.plan], { body: 'Your plan is active. Enjoy the natural Notchman voice!' });
+        $('planLead').textContent = `You're on Notchman ${PLAN_NAMES[usage.plan]}. The natural Notchman voice is on.`;
+        new Notification(`Notchman ${PLAN_NAMES[usage.plan]} is active`, { body: 'The natural Notchman voice is on.' });
       }
     }, 6000);
   }
@@ -99,7 +124,7 @@
       const result = await window.notchman.upgrade(button.dataset.upgrade);
       button.textContent = result.ok ? 'Finish in your browser' : label;
       button.disabled = false;
-      if (!result.ok) alert(result.message || "Checkout couldn't be opened. Please try again.");
+      if (!result.ok) tell("Checkout didn't open", result.message || 'Please try again.');
       if (result.ok) waitForPayment(button.dataset.upgrade);
     });
   }
@@ -115,7 +140,7 @@
 
   function when(at) {
     const mins = Math.round((Date.now() - at) / 60000);
-    if (mins < 1) return 'just now';
+    if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins} min ago`;
     const hours = Math.round(mins / 60);
     if (hours < 24) return `${hours} h ago`;
@@ -132,20 +157,24 @@
     $('statSaved').textContent = `${Math.round(saved / 250).toLocaleString()} min`;
   }
 
+  function iconButton(name, title, className = '') {
+    const button = el('button', `icon-btn ${className}`.trim());
+    button.title = title;
+    button.setAttribute('aria-label', title);
+    button.append(window.icon(name));
+    return button;
+  }
+
   function row(item, { compact = false } = {}) {
-    const li = document.createElement('li');
+    const li = el('li');
     if (item.id === selectedId && !compact) li.classList.add('selected');
-    const play = Object.assign(document.createElement('button'), { className: 'play', textContent: '▶', title: 'Play again' });
+    const play = iconButton('play', 'Play again', 'accent');
     play.addEventListener('click', (event) => { event.stopPropagation(); window.notchman.replay(item.id); });
-    const what = Object.assign(document.createElement('div'), { className: 'what' });
-    what.append(
-      Object.assign(document.createElement('div'), { className: 'title', textContent: item.title || item.spoken.slice(0, 80) }),
-      Object.assign(document.createElement('div'), { className: 'meta', textContent: `${item.source} · ${when(item.at)}` }),
-    );
-    const mode = Object.assign(document.createElement('span'), { className: 'mode', textContent: item.action === 'tldr' ? 'TL;DR' : 'Read' });
-    li.append(play, what, mode);
+    const what = el('div', 'what');
+    what.append(el('div', 'title', item.title || item.spoken.slice(0, 80)), el('div', 'meta', `${item.source} · ${when(item.at)}`));
+    li.append(play, what, el('span', item.action === 'tldr' ? 'tag' : 'tag tag-quiet', item.action === 'tldr' ? 'TL;DR' : 'Read'));
     if (!compact) {
-      const remove = Object.assign(document.createElement('button'), { className: 'remove', textContent: '×', title: 'Remove' });
+      const remove = iconButton('trash', 'Remove from history', 'remove');
       remove.addEventListener('click', async (event) => {
         event.stopPropagation();
         historyItems = await window.notchman.removeHistory(item.id);
@@ -158,43 +187,41 @@
     return li;
   }
 
-  /** The TL;DR's key points, as a highlighted list (newer TL;DRs have them). */
-  function keyPoints(item) {
-    if (!Array.isArray(item.highlights) || !item.highlights.length) return [];
-    const list = Object.assign(document.createElement('ul'), { className: 'key-points' });
-    list.replaceChildren(...item.highlights.map((h) => Object.assign(document.createElement('li'), { textContent: h })));
-    return [Object.assign(document.createElement('h2'), { textContent: 'Key points' }), list];
-  }
-
   function detail() {
     const item = historyItems.find((i) => i.id === selectedId);
     const box = $('detail');
     if (!item) {
-      box.replaceChildren(Object.assign(document.createElement('p'), { className: 'muted', textContent: 'Choose something on the left to see what was said.' }));
+      box.replaceChildren(el('p', 'placeholder', historyItems.length ? 'Choose something on the left to see what was said.' : 'What you listen to shows up here.'));
       return;
     }
-    const buttons = Object.assign(document.createElement('div'), { className: 'buttons' });
-    const play = Object.assign(document.createElement('button'), { className: 'primary small', textContent: item.action === 'tldr' ? '▶ Play TL;DR' : '▶ Play' });
+    const parts = [
+      el('h3', '', item.title || 'Untitled'),
+      el('p', 'caption meta-line', `${item.source} · ${new Date(item.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`),
+    ];
+    // Newer TL;DRs come with their key points.
+    if (Array.isArray(item.highlights) && item.highlights.length) {
+      const list = el('ul', 'key-points');
+      list.replaceChildren(...item.highlights.map((h) => el('li', '', h)));
+      parts.push(el('h4', 'section-title', 'Key points'), list);
+    }
+    parts.push(el('h4', 'section-title', item.action === 'tldr' ? 'TL;DR' : 'Text'), el('div', 'text', item.spoken));
+
+    const buttons = el('div', 'buttons');
+    const play = el('button', 'btn btn-primary btn-sm');
+    play.append(window.icon('play'), document.createTextNode(item.action === 'tldr' ? 'Play TL;DR' : 'Play'));
     play.addEventListener('click', () => window.notchman.replay(item.id));
-    const copy = Object.assign(document.createElement('button'), { className: 'secondary small', textContent: 'Copy text' });
+    const copy = el('button', 'btn btn-secondary btn-sm');
+    const copyLabel = document.createTextNode('Copy text');
+    copy.append(window.icon('copy'), copyLabel);
     copy.addEventListener('click', async () => {
       await navigator.clipboard.writeText(item.spoken);
-      copy.textContent = 'Copied';
-      setTimeout(() => { copy.textContent = 'Copy text'; }, 1500);
+      copyLabel.textContent = 'Copied';
+      setTimeout(() => { copyLabel.textContent = 'Copy text'; }, 1500);
     });
     buttons.append(play, copy);
-    const parts = [
-      Object.assign(document.createElement('h3'), { textContent: item.title || 'Untitled' }),
-      Object.assign(document.createElement('p'), { className: 'muted', textContent: `${item.action === 'tldr' ? 'TL;DR' : 'Read'} · ${item.source} · ${new Date(item.at).toLocaleString()}` }),
-      ...keyPoints(item),
-      Object.assign(document.createElement('div'), { className: 'text', textContent: item.spoken }),
-      buttons,
-    ];
-    if (item.action === 'tldr' && item.original) {
-      const h = Object.assign(document.createElement('h2'), { textContent: 'Original' });
-      h.style.marginTop = '18px';
-      parts.push(h, Object.assign(document.createElement('div'), { className: 'text muted', textContent: item.original }));
-    }
+    parts.push(buttons);
+
+    if (item.action === 'tldr' && item.original) parts.push(el('h4', 'section-title', 'Original'), el('div', 'text original', item.original));
     box.replaceChildren(...parts);
   }
 
@@ -203,9 +230,11 @@
     const shown = query
       ? historyItems.filter((i) => `${i.title} ${i.source} ${i.spoken} ${i.original || ''}`.toLowerCase().includes(query))
       : historyItems;
-    const empty = (text) => Object.assign(document.createElement('li'), { className: 'empty', textContent: text });
-    $('history').replaceChildren(...(shown.length ? shown.map((i) => row(i)) : [empty(query ? 'Nothing matches.' : 'Nothing yet. Copy something and press the shortcut.')]));
-    $('recent').replaceChildren(...(historyItems.length ? historyItems.slice(0, 5).map((i) => row(i, { compact: true })) : [empty('Nothing yet. Copy something and press the shortcut.')]));
+    const empty = (text) => el('li', 'empty', text);
+    const nothingYet = 'Nothing yet. Select some text and press your TL;DR shortcut.';
+    $('history').replaceChildren(...(shown.length ? shown.map((i) => row(i)) : [empty(query ? 'Nothing matches.' : nothingYet)]));
+    $('recent').replaceChildren(...(historyItems.length ? historyItems.slice(0, 5).map((i) => row(i, { compact: true })) : [empty(nothingYet)]));
+    $('clearHistory').classList.toggle('gone', !historyItems.length);
     stats(historyItems);
     detail();
   }
@@ -217,11 +246,11 @@
 
   $('search').addEventListener('input', render);
   $('clearHistory').addEventListener('click', async () => {
-    if (confirm('Clear your listening history on this computer?')) {
-      historyItems = await window.notchman.clearHistory();
-      selectedId = null;
-      render();
-    }
+    const yes = await ask({ title: 'Clear your history?', body: 'Everything you listened to on this computer is removed. This can’t be undone.', confirm: 'Clear all', danger: true });
+    if (!yes) return;
+    historyItems = await window.notchman.clearHistory();
+    selectedId = null;
+    render();
   });
 
   // --- Updates ----------------------------------------------------------------
@@ -230,7 +259,12 @@
 
   function showUpdate(info) {
     if (info && info.community) {
-      $('updateStatus').textContent = 'Community edition: to update, run git pull and npm install.';
+      $('updateStatus').textContent = 'Community edition';
+      return;
+    }
+    if (info && info.store) {
+      $('updateStatus').textContent = 'Updates come from the Microsoft Store.';
+      $('checkUpdate').classList.add('gone');
       return;
     }
     update = info && info.available ? info : null;
@@ -241,10 +275,10 @@
       const label = update.ready ? 'Restart to update' : 'Update now';
       for (const b of [$('installUpdate'), $('bannerInstall')]) if (!b.disabled) b.textContent = label;
       $('updateText').textContent = update.ready
-        ? `Notchman ${update.version} is downloaded and installs by itself next time Notchman starts.`
-        : `Notchman ${update.version} is ready (you have ${update.current}).`;
+        ? `Notchman ${update.version} is downloaded. It installs next time Notchman starts.`
+        : `Notchman ${update.version} is available. You have ${update.current}.`;
       $('updateStatus').textContent = update.ready
-        ? `Version ${update.version} is downloaded. It installs by itself next time Notchman starts, or restart now.`
+        ? `Version ${update.version} is downloaded and installs next time Notchman starts.`
         : `Version ${update.version} is available.`;
     } else if (info && info.ok) {
       $('updateStatus').textContent = "You're up to date.";
@@ -254,7 +288,7 @@
   }
 
   async function checkUpdates() {
-    $('updateStatus').textContent = 'Checking for updates…';
+    if (!community) $('updateStatus').textContent = 'Checking for updates…';
     showUpdate(await window.notchman.checkUpdate());
   }
 
@@ -263,7 +297,7 @@
     for (const b of [$('installUpdate'), $('bannerInstall')]) { b.disabled = true; b.textContent = busy; }
     const result = await window.notchman.installUpdate();
     if (!result.ok) {
-      alert(result.message || "The update couldn't be downloaded. Try again later.");
+      tell("The update didn't download", result.message || 'Try again later.');
       for (const b of [$('installUpdate'), $('bannerInstall')]) { b.disabled = false; b.textContent = 'Update now'; }
     }
   }
@@ -272,53 +306,63 @@
   $('installUpdate').addEventListener('click', install);
   $('bannerInstall').addEventListener('click', install);
 
+  // --- Uninstall --------------------------------------------------------------
+
+  let uninstallKind = null;
+  window.notchman.uninstallInfo().then((info) => {
+    uninstallKind = info;
+    if (info.kind === 'source') {
+      $('uninstallNote').textContent = 'Removes its history, settings and startup entry. Then you delete its folder.';
+    }
+    if (info.kind === 'store') {
+      $('uninstallNote').textContent = 'Removes your history and settings, then opens Windows Settings to remove the app.';
+    }
+  });
+
+  $('uninstall').addEventListener('click', async () => {
+    const info = uninstallKind || { kind: 'installed' };
+    const body = info.kind === 'source'
+      ? ['Notchman removes its history, settings and startup entry from this computer, then closes.',
+        `Then delete the folder you downloaded it to${info.folder ? `: ${info.folder}` : ''}. Notchman opens it for you.`]
+      : info.kind === 'store'
+      ? ['Notchman removes your listening history and settings, then closes.',
+        'Windows Settings opens on Installed apps: choose Notchman, then Uninstall.']
+      : ['Notchman, your listening history and settings are removed from this computer.',
+        community ? '' : 'Your subscription isn’t cancelled by uninstalling. Cancel it from your receipt email.'].filter(Boolean);
+    const yes = await ask({ title: 'Uninstall Notchman?', body, confirm: 'Uninstall', danger: true });
+    if (!yes) return;
+    $('uninstall').disabled = true;
+    $('uninstall').textContent = 'Uninstalling…';
+    const result = await window.notchman.uninstall();
+    if (!result || !result.ok) {
+      $('uninstall').disabled = false;
+      $('uninstall').textContent = 'Uninstall…';
+      tell("Notchman couldn't uninstall", (result && result.message) || 'Try again, or remove it from Windows Settings → Apps.');
+    }
+  });
+
   // --- Start ------------------------------------------------------------------
+
+  // The Shiba on Home waves hello each time the window opens.
+  const heroShiba = window.createShiba($('heroShiba'), { scale: 2 });
+  heroShiba.setMood('hello');
 
   window.notchman.onDashboard(({ tab, changed }) => {
     if (tab) show(tab);
     if (changed) { loadHistory(); loadUsage(); }
   });
-  // --- Your API keys (Community edition) -------------------------------------
-
-  const KEY_NAMES = ['GROQ_API_KEY', 'ELEVENLABS_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL', 'LLM_API_KEY'];
-  const SOURCES = { environment: 'Set by an environment variable', '.env file': 'Set in your .env file', saved: 'Saved ✓' };
-
-  function showKeys(described) {
-    if (!described) return;
-    for (const name of KEY_NAMES) {
-      const where = described[name];
-      $(`src-${name}`).textContent = where ? SOURCES[where] || '' : '';
-    }
-    $('keysStatus').textContent = described.GROQ_API_KEY || described.LLM_BASE_URL
-      ? 'Ready: copy something and press your TL;DR shortcut.'
-      : 'Add your Groq key to start.';
-  }
-
-  $('saveKeys').addEventListener('click', async () => {
-    const changes = {};
-    for (const name of KEY_NAMES) {
-      const value = $(`key-${name}`).value.trim();
-      if (value) changes[name] = value;
-    }
-    if (!Object.keys(changes).length) {
-      $('keysStatus').textContent = 'Paste a key first.';
-      return;
-    }
-    showKeys(await window.notchman.saveKeys(changes));
-    for (const name of KEY_NAMES) $(`key-${name}`).value = '';
-  });
 
   window.notchman.getSettings().then((s) => {
-    if (s.edition === 'community') {
+    community = s.edition === 'community';
+    if (community) {
       document.body.classList.add('community');
-      showKeys(s.keys);
+      $('historyLead').textContent = "Everything you've listened to on this computer.";
     }
     const pretty = (key) => key.replace('CommandOrControl', s.platform === 'darwin' ? '⌘' : 'Ctrl').replace(/\+/g, s.platform === 'darwin' ? '' : '+');
     $('homeTldrKey').textContent = pretty(s.settings.tldrShortcut);
     $('homeReadKey').textContent = pretty(s.settings.readShortcut);
     $('installId').textContent = s.settings.installId || '';
     $('versionNumber').textContent = s.version;
-    $('platformName').textContent = s.platform === 'darwin' ? 'Mac' : s.platform === 'win32' ? 'Windows' : 'your computer';
   });
   window.notchman.checkUpdate().then(showUpdate);
   show(new URLSearchParams(location.search).get('tab') || 'home');

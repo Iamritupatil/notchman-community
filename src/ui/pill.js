@@ -11,11 +11,20 @@ let player = null;
 let hideTimer = null;
 let hovering = false;
 
-pillEl.addEventListener('mouseenter', () => { hovering = true; });
-pillEl.addEventListener('mouseleave', () => {
-  hovering = false;
-  if (player?.done) scheduleHide(2500);
+// Clicks reach the pill only while the mouse is over it: everywhere else the
+// window lets them through to the app below. This is the same way the
+// floating Shiba takes clicks, which works on every Windows setup.
+function setHovering(over) {
+  if (over === hovering) return;
+  hovering = over;
+  window.notchman.control(over ? 'hit' : 'miss');
+  if (!over && player?.done) scheduleHide(2500);
+}
+window.addEventListener('mousemove', (event) => {
+  const target = document.elementFromPoint(event.clientX, event.clientY);
+  setHovering(Boolean(target && target.closest('.pill:not(.hidden)')));
 });
+document.addEventListener('mouseleave', () => setHovering(false));
 
 window.notchman.onState((state) => {
   switch (state.kind) {
@@ -81,6 +90,7 @@ function show(mode) {
 function hide() {
   clearTimeout(hideTimer);
   pillEl.classList.add('hidden');
+  setHovering(false);
   setTimeout(() => window.notchman.control('hide'), 220);
 }
 
@@ -280,14 +290,22 @@ function createPlayer({ id, pieceCount, speed }) {
 
 // --- Buttons -------------------------------------------------------------------
 
-// Buttons act on press (pointerdown): the pill never takes focus, and on
-// Windows a full click on such a window could get lost.
-const press = (id, fn) => $(id).addEventListener('pointerdown', (event) => {
-  if (event.button !== 0) return;
-  event.preventDefault();
-  clearTimeout(hideTimer);
-  fn();
-});
+// Buttons act on press (pointerdown), with click as a fallback: the pill never
+// takes focus, and either event alone has been lost on some Windows setups.
+let pressedAt = 0;
+function press(id, fn) {
+  const act = (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.type === 'click' && Date.now() - pressedAt < 600) return; // already handled on press
+    if (event.type === 'pointerdown') pressedAt = Date.now();
+    clearTimeout(hideTimer);
+    fn();
+  };
+  $(id).addEventListener('pointerdown', act);
+  $(id).addEventListener('click', act);
+}
 const SPEEDS = [1, 1.25, 1.5, 1.75, 2, 0.75];
 press('playPause', () => player?.toggle());
 press('back', () => player?.seek(-15));
@@ -300,8 +318,14 @@ press('speed', () => {
   window.notchman.setSpeed(nextSpeed);
 });
 press('original', () => window.notchman.control('original'));
-press('stop', () => {
+function close() {
   stopPlayer();
   pillEl.classList.add('hidden');
+  setHovering(false);
   window.notchman.control('stop');
+}
+press('stop', close);
+// A message closes with a click anywhere on it.
+pillEl.addEventListener('pointerdown', (event) => {
+  if (event.button === 0 && pillEl.classList.contains('message')) close();
 });

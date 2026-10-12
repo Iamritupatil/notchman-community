@@ -3,25 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="buddy.css">
 </head>
 <body>
   <div id="buddy" class="buddy">
-    <button id="shiba" class="shiba" title="Notchman: select text, then click for TL;DR or Read. Drag to move." aria-label="Notchman">
-      <img src="../../assets/shiba-face.png" alt="" draggable="false">
+    <button id="shiba" class="shiba" title="Notchman: select text, then click. Drag to move." aria-label="Notchman">
+      <span id="shibaArt"></span>
     </button>
     <div id="menu" class="menu" role="menu">
-      <button id="tldr" class="glass primary" role="menuitem" title="TL;DR of the text you selected (or copied)">
-        <span class="icon">✦</span><span class="label">TL;DR</span>
-      </button>
-      <button id="read" class="glass" role="menuitem" title="Read the text you selected (or copied) in full">
-        <span class="icon">▶</span><span class="label">Read aloud</span>
-      </button>
-      <button id="pick" class="glass" role="menuitem" title="Pick a paragraph on screen (for text you can't select)">
-        <span class="icon">⌖</span><span class="label">Pick on screen</span><span class="pro">PRO</span>
-      </button>
+      <button id="tldr" class="item" role="menuitem"><i data-icon="tldr"></i><span class="label">TL;DR</span><span class="hint" id="tldrKey">Alt+T</span></button>
+      <button id="read" class="item" role="menuitem"><i data-icon="read"></i><span class="label">Read aloud</span><span class="hint" id="readKey">Alt+R</span></button>
+      <button id="pick" class="item" role="menuitem"><i data-icon="pick"></i><span class="label">Pick on screen</span><span class="tag pro">Pro</span></button>
     </div>
   </div>
+  <script src="icons.js"></script>
+  <script src="shiba.js"></script>
   <script src="buddy.js"></script>
 </body>
 </html>

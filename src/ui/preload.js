@@ -12,7 +12,6 @@ contextBridge.exposeInMainWorld('notchman', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (changes) => ipcRenderer.invoke('settings:set', changes),
   previewVoice: (voiceId) => ipcRenderer.invoke('voice:preview', voiceId),
-  saveKeys: (changes) => ipcRenderer.invoke('settings:keys', changes),
   // The Notchman window (dashboard).
   usage: () => ipcRenderer.invoke('dashboard:usage'),
   history: () => ipcRenderer.invoke('dashboard:history'),
@@ -23,10 +22,17 @@ contextBridge.exposeInMainWorld('notchman', {
   dashboardAction: (action) => ipcRenderer.send('dashboard:action', action),
   checkUpdate: () => ipcRenderer.invoke('dashboard:check-update'),
   installUpdate: () => ipcRenderer.invoke('dashboard:install-update'),
+  uninstallInfo: () => ipcRenderer.invoke('uninstall:info'),
+  uninstall: () => ipcRenderer.invoke('uninstall:run'),
   onDashboard: (callback) => {
     ipcRenderer.on('dashboard:tab', (_event, tab) => callback({ tab }));
     ipcRenderer.on('dashboard:changed', () => callback({ changed: true }));
   },
+  // The agreement shown before first use.
+  agreementInfo: () => ipcRenderer.invoke('agree:info'),
+  agree: () => ipcRenderer.invoke('agree:accept'),
+  quitApp: () => ipcRenderer.send('agree:quit'),
+  openLink: (url) => ipcRenderer.send('open-link', url),
   // The floating Shiba.
   buddy: (command) => ipcRenderer.send('buddy', command),
   onBuddy: (callback) => ipcRenderer.on('buddy', (_event, state) => callback(state)),
