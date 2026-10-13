@@ -46,10 +46,10 @@ window.notchman.onState((state) => {
     case 'error':
       stopPlayer();
       show('error');
-      $('title').textContent = 'Notchman';
+      $('title').textContent = state.title || 'Notchman';
       $('status').textContent = state.message;
-      setControls({ stop: true });
-      scheduleHide(6000);
+      setControls({ stop: true, upgrade: state.upgrade });
+      scheduleHide(state.upgrade ? 15000 : 6000);
       break;
     case 'message':
       stopPlayer();
@@ -103,7 +103,7 @@ function scheduleHide(ms) {
 }
 
 function setControls(visible) {
-  for (const id of ['back', 'playPause', 'forward', 'speed', 'original', 'stop']) {
+  for (const id of ['back', 'playPause', 'forward', 'speed', 'original', 'upgrade', 'stop']) {
     $(id).classList.toggle('gone', !visible[id]);
   }
 }
@@ -318,12 +318,13 @@ press('speed', () => {
   window.notchman.setSpeed(nextSpeed);
 });
 press('original', () => window.notchman.control('original'));
-function close() {
+function close(command = 'stop') {
   stopPlayer();
   pillEl.classList.add('hidden');
   setHovering(false);
-  window.notchman.control('stop');
+  window.notchman.control(command);
 }
+press('upgrade', () => close('upgrade'));
 press('stop', close);
 // A message closes with a click anywhere on it.
 pillEl.addEventListener('pointerdown', (event) => {

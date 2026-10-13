@@ -308,6 +308,12 @@ async function run(action, copiedOverride, { source } = {}) {
   } catch (error) {
     if (id !== session?.id) return;
     buddyState({ busy: false, speaking: false });
+    if (error?.reason === 'too_long') {
+      // Over the free length: short enough for the pill, with Upgrade next to it.
+      sendState({ kind: 'error', id, upgrade: true, title: edition.community ? 'Too long for Notchman Community' : 'Too long for the free plan',
+                  message: 'Notchman Pro makes TL;DRs of texts over 8,000 characters.' });
+      return;
+    }
     sendState({ kind: 'error', id, message: friendly(error) });
   }
 }
@@ -546,6 +552,12 @@ ipcMain.on('control', (_event, command) => {
       break;
     case 'settings':
       openSettings();
+      break;
+    case 'upgrade':
+      session = null;
+      hidePill();
+      buddyState({ speaking: false, busy: false });
+      openDashboard('plan');
       break;
     default:
       break;

@@ -42,6 +42,8 @@ html, body { background: transparent; overflow: hidden; user-select: none; -webk
 .controls button.text { width: auto; padding: 0 11px; font-size: 12px; font-weight: 600; }
 .controls button.main { width: 36px; height: 36px; border-radius: 18px; background: #1b74e4; color: #fff; }
 .controls button.main:hover { background: #2a82ef; }
+.controls button.accent { background: #1b74e4; color: #fff; }
+.controls button.accent:hover { background: #2a82ef; }
 .controls button.main .icon { width: 18px; height: 18px; }
 .controls button .n { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -42%); font-size: 7px; font-weight: 700; }
 #speed { min-width: 44px; }

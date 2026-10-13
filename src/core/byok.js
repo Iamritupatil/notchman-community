@@ -11,14 +11,18 @@
 //    voice that runs on this computer.
 
 const GROQ = 'https://api.groq.com/openai/v1';
-const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+// Groq retired llama-3.3-70b-versatile; this is the model the Notchman server uses.
+const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 const MAX_INPUT_CHARACTERS = 20_000;
+/** TL;DRs of texts up to this long (about 1,300 words); Notchman Pro takes long ones. */
+const MAX_TLDR_CHARACTERS = 8_000;
 
 class ApiError extends Error {
-  constructor(message, status = 0) {
+  constructor(message, status = 0, reason) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -65,7 +69,8 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
         body: JSON.stringify({
           model: provider.model,
           temperature: 0.3,
-          max_tokens: 700,
+          // gpt-oss thinks before it answers, and the thinking counts toward max_tokens.
+          ...(provider.model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low', max_tokens: 2000 } : { max_tokens: 700 }),
           messages: [
             { role: 'system', content: INSTRUCTIONS },
             { role: 'user', content: `Make a TL;DR of this in ${wordLimit(text)} words at most.\n\nTEXT:\n${text.slice(0, MAX_INPUT_CHARACTERS)}` },
@@ -113,6 +118,10 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
 
     /** @returns {Promise<string>} the spoken summary */
     async tldr(text) {
+      if (text.length > MAX_TLDR_CHARACTERS) {
+        throw new ApiError("That's over 8,000 characters, the limit in Notchman Community. "
+          + 'Notchman Pro makes TL;DRs of long texts too, like reports and research papers.', 413, 'too_long');
+      }
       return complete(text);
     },
 

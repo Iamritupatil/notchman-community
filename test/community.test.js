@@ -41,7 +41,13 @@ test('a TL;DR goes straight to Groq with your key', async () => {
   assert.equal(await client.tldr('Lunch moved to Friday at one. Bring the slides and the budget numbers.'), 'The short version.');
   assert.equal(calls[0].url, 'https://api.groq.com/openai/v1/chat/completions');
   assert.equal(calls[0].init.headers.Authorization, 'Bearer gsk_test');
-  assert.equal(JSON.parse(calls[0].init.body).model, 'llama-3.3-70b-versatile');
+  assert.equal(JSON.parse(calls[0].init.body).model, 'openai/gpt-oss-120b');
+  assert.equal(JSON.parse(calls[0].init.body).reasoning_effort, 'low');
+});
+
+test('texts over 8,000 characters point to Notchman Pro, without calling the AI service', async () => {
+  const client = createClient({ keys: createKeyStore({ env: { GROQ_API_KEY: 'gsk_test' } }), fetch: async () => { throw new Error('no call'); } });
+  await assert.rejects(client.tldr('word '.repeat(1700)), (e) => e instanceof ApiError && e.reason === 'too_long' && /8,000 characters.*Pro/.test(e.message));
 });
 
 test('without a key, or with a wrong one, the message says what to do', async () => {

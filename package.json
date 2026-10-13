@@ -80,10 +80,11 @@
       "category": "public.app-category.productivity",
       "artifactName": "Notchman-Community-${arch}.${ext}",
       "extendInfo": {
-        "LSUIElement": true
+        "LSUIElement": true,
+        "NSAppleEventsUsageDescription": "Notchman copies the text you selected so it can read it to you."
       },
-      "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "identity": "-"
     },
     "dmg": {
       "title": "Notchman",
