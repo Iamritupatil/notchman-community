@@ -14,7 +14,7 @@
 
 ## Quick start (2 minutes)
 
-You need [Node.js 20+](https://nodejs.org) and git. Windows and macOS.
+You need [Node.js 20+](https://nodejs.org) and git. Windows and macOS. New to the terminal? Follow the **[step-by-step guide](https://notchman.app/community)**.
 
 ```bash
 git clone --depth 1 https://github.com/Iamritupatil/notchman-community.git
