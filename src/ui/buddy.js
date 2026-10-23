@@ -8,7 +8,7 @@ const shiba = document.getElementById('shiba');
 // The Shiba itself, just its head: happy hello when Notchman starts, one ear up
 // while it listens (you hover it or open its menu), thinking while a TL;DR is
 // being made, talking while the voice plays.
-const art = window.createShiba(document.getElementById('shibaArt'), { scale: 2, variant: 'head' });
+const art = window.createShiba(document.getElementById('shibaArt'), { scale: 4, variant: 'head' });
 art.setMood('hello');
 let last = {};
 let hovering = false;

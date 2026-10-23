@@ -644,7 +644,7 @@ ipcMain.on('control', (_event, command) => {
 // ---------------------------------------------------------------------------
 // The floating Shiba
 
-const BUDDY = { width: 60, height: 54, menuWidth: 206, openHeight: 140 };
+const BUDDY = { width: 100, height: 88, menuWidth: 206, openHeight: 140 };
 let buddyOpen = false;
 let buddyCloseTimer = null;
 let buddyLook = { busy: false, speaking: false, valign: 'center', community: edition.community };

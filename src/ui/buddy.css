@@ -1,4 +1,4 @@
-/* The floating Shiba: just its head, small. Click it for a small menu (TL;DR,
+/* The floating Shiba: just its head. Click it for a small menu (TL;DR,
    Read aloud, Pick on screen); drag it anywhere. */
 html, body { background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
 
@@ -10,19 +10,19 @@ html, body { background: transparent; overflow: hidden; user-select: none; -webk
 .buddy.left { flex-direction: row-reverse; }
 
 .shiba {
-  position: relative; width: 48px; height: 42px; flex: none; border: 0; padding: 0; background: none; cursor: grab;
+  position: relative; width: 88px; height: 76px; flex: none; border: 0; padding: 0; background: none; cursor: grab;
   display: grid; place-items: end center; transition: transform 160ms cubic-bezier(.2, .8, .2, 1);
 }
 .shiba:active { cursor: grabbing; }
-.shiba:hover { transform: translateY(-1px); }
-.shiba .shiba-sprite { pointer-events: none; filter: drop-shadow(0 1px 1.5px rgba(11, 31, 68, 0.25)); }
+.shiba:hover { transform: translateY(-2px); }
+.shiba .shiba-sprite { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(11, 31, 68, 0.25)); }
 /* It bobs gently while a TL;DR is being made, with three thinking dots. */
 .buddy.busy .shiba .shiba-sprite { animation: bob 1.2s ease-in-out infinite; }
-@keyframes bob { 50% { transform: translateY(-1px); } }
-.thought { position: absolute; top: 0; right: -2px; display: flex; gap: 2px; padding: 2px 3px; border-radius: 6px;
+@keyframes bob { 50% { transform: translateY(-2px); } }
+.thought { position: absolute; top: 0; right: -2px; display: flex; gap: 3px; padding: 4px 5px; border-radius: 8px;
   background: var(--surface); border: 1px solid var(--line-strong); opacity: 0; transform: scale(0.6); transform-origin: bottom left;
   transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
-.thought i { width: 3px; height: 3px; border-radius: 50%; background: var(--accent); opacity: 0.25; animation: think 1.2s infinite; }
+.thought i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: 0.25; animation: think 1.2s infinite; }
 .thought i:nth-child(2) { animation-delay: 0.2s; }
 .thought i:nth-child(3) { animation-delay: 0.4s; }
 @keyframes think { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
