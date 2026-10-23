@@ -27,11 +27,12 @@ class ApiError extends Error {
 }
 
 const INSTRUCTIONS = [
-  'You turn text into a short TL;DR that will be read aloud.',
-  'Read all of it first, then say what matters most in the clearest order, not sentence by sentence.',
-  'Keep every material detail exactly: numbers, dates, names, prices, conditions, and who needs to do what.',
-  'Write natural spoken sentences: no lists, no markdown, no emojis, no "this text says".',
-  'Use the language of the text. Reply with only the TL;DR.',
+  'You turn text into a short TL;DR that will be read aloud, like a smart friend who just read it for the listener.',
+  'Read all of it first. Open with the gist in one plain sentence, then explain what matters in the easiest order to follow, with why it matters, and end with the takeaway or what to do if that adds something.',
+  'Keep every material detail exactly: numbers, dates, names, prices, conditions, and who needs to do what, but at most two numbers in a sentence.',
+  'Sound like a person talking: warm, plain words, contractions, short sentences of varied length.',
+  'Never say "the text", "the author", "it discusses" or "it mentions", never "Additionally", "Furthermore" or "In conclusion": just say the thing itself.',
+  'No lists, no markdown, no emojis. Use the language of the text. Reply with only the TL;DR.',
 ].join(' ');
 
 function wordLimit(text) {
