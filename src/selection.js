@@ -10,11 +10,13 @@
 // for Accessibility permission).
 
 const { spawn, execFile } = require('node:child_process');
+const { clipboardSourceURL } = require('./core/source-app');
 
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
 
 let shell = null;
+let lastSourceURL = null;
 
 function windowsShell() {
   if (shell && !shell.killed && shell.exitCode === null) return shell;
@@ -67,6 +69,8 @@ async function selectedText(clipboard) {
     await wait(40);
     text = String((await clipboard.readText()) || '').trim();
   }
+  // Where it was copied from (a browser page), before the clipboard is put back.
+  lastSourceURL = text ? await clipboardSourceURL(clipboard) : null;
   // Put back what was there before.
   await clipboard.clear();
   if (saved) {
@@ -79,4 +83,4 @@ async function selectedText(clipboard) {
   return text;
 }
 
-module.exports = { selectedText, warmUp };
+module.exports = { selectedText, warmUp, sourceURL: () => lastSourceURL };

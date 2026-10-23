@@ -60,6 +60,7 @@ code { font: 12px/18px ui-monospace, "Cascadia Mono", Consolas, monospace; backg
 
 /* The full-body Shiba (shiba.js): pixel art, scaled without smoothing. */
 .shiba-sprite { display: inline-block; flex: none; background: url("../../assets/shiba-sprites.png") no-repeat 0 0; image-rendering: pixelated; }
+.shiba-sprite.head { background-image: url("../../assets/shiba-head-sprites.png"); }
 
 /* Icons (icons.js) */
 .icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }

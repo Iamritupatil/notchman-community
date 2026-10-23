@@ -116,8 +116,8 @@
           <h2 class="title-2">Free</h2>
           <div class="price"><b>$0</b></div>
           <ul class="checks">
-            <li><i data-icon="check"></i><span>5 TL;DRs a day, of texts up to 8,000 characters</span></li>
-            <li><i data-icon="check"></i><span>Notchman voice preview (2,500 characters)</span></li>
+            <li><i data-icon="check"></i><span>15 TL;DRs a month, of texts up to 8,000 characters</span></li>
+            <li><i data-icon="check"></i><span>A preview of the Notchman voice (about 3 min)</span></li>
             <li><i data-icon="check"></i><span>Unlimited free voice on your computer</span></li>
           </ul>
           <button class="btn btn-secondary" disabled>Included</button>
@@ -125,11 +125,12 @@
         <div class="card plan" data-plan="pro">
           <h2 class="title-2">Pro</h2>
           <div class="price"><b>$4.99</b> / month</div>
+          <p class="muted plan-line">Listen to long text without API keys.</p>
           <ul class="checks">
-            <li><i data-icon="check"></i><span>About 28 min of Notchman voice a month</span></li>
-            <li><i data-icon="check"></i><span>TL;DRs of long texts, like reports and papers</span></li>
-            <li><i data-icon="check"></i><span>Natural voices, faster start</span></li>
-            <li><i data-icon="check"></i><span>Then the standard voice, unlimited</span></li>
+            <li><i data-icon="check"></i><span>About 28 min of the Notchman voice a month (25,000 characters)</span></li>
+            <li><i data-icon="check"></i><span>Up to 500 TL;DRs a month, including long reports and papers</span></li>
+            <li><i data-icon="check"></i><span>Pick any paragraph on screen</span></li>
+            <li><i data-icon="check"></i><span>After that, the standard voice keeps reading</span></li>
           </ul>
           <button class="btn btn-primary" data-upgrade="pro">Upgrade to Pro</button>
         </div>
@@ -137,9 +138,10 @@
           <span class="tag best-tag">Best value</span>
           <h2 class="title-2">Pro+</h2>
           <div class="price"><b>$9.99</b> / month</div>
+          <p class="muted plan-line">For heavy daily listening with higher usage.</p>
           <ul class="checks">
-            <li><i data-icon="check"></i><span>About 67 min of Notchman voice a month</span></li>
-            <li><i data-icon="check"></i><span>Enough for full reads</span></li>
+            <li><i data-icon="check"></i><span>About 67 min of the Notchman voice a month (60,000 characters)</span></li>
+            <li><i data-icon="check"></i><span>Up to 1,500 TL;DRs a month</span></li>
             <li><i data-icon="check"></i><span>Everything in Pro</span></li>
           </ul>
           <button class="btn btn-primary" data-upgrade="proplus">Upgrade to Pro+</button>
@@ -172,6 +174,7 @@
         <div class="card list">
           <label class="row"><span>Show the Shiba on screen</span><span class="switch"><input type="checkbox" id="showBuddy"><span></span></span></label>
           <label class="row" id="openAtLoginRow"><span>Open Notchman when you sign in</span><span class="switch"><input type="checkbox" id="openAtLogin"><span></span></span></label>
+          <label class="row pro-only"><span>Share anonymous usage statistics<span class="caption">Feature names only, never what you read</span></span><span class="switch"><input type="checkbox" id="shareStats"><span></span></span></label>
         </div>
       </div>
 
@@ -208,7 +211,7 @@
       <div class="group">
         <h2 class="group-title">Help</h2>
         <div class="card card-pad">
-          <p class="muted community-only">Notchman Community is free for personal, non-commercial use (see LICENSE and NOTICE.md). For work or business use, get Notchman Pro. Report bugs and ideas on GitHub. To update, run <code>git pull</code> and then <code>npm install</code> in its folder.</p>
+          <p class="muted community-only">Notchman Community is free for personal, non-commercial use (see LICENSE and NOTICE.md). For work or business use, get Notchman Pro. Report bugs and ideas on GitHub. To update, use Check for updates above (or run <code>git pull</code> and <code>npm install</code> in its folder).</p>
           <p class="muted pro-only">Questions, or something not working? Email <a href="mailto:ritu@miniclayai.com">ritu@miniclayai.com</a>. Notchman is also on iPhone: <a href="https://notchman.app" target="_blank">notchman.app</a>.</p>
         </div>
       </div>

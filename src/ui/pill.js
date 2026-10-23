@@ -25,6 +25,8 @@ window.addEventListener('mousemove', (event) => {
   setHovering(Boolean(target && target.closest('.pill:not(.hidden)')));
 });
 document.addEventListener('mouseleave', () => setHovering(false));
+// Some Windows setups don't forward mouse moves: entering the pill counts too.
+pillEl.addEventListener('pointerenter', () => setHovering(!pillEl.classList.contains('hidden')));
 
 window.notchman.onState((state) => {
   switch (state.kind) {
@@ -39,8 +41,8 @@ window.notchman.onState((state) => {
       show('speaking');
       $('title').textContent = state.title || 'Notchman';
       $('status').textContent = statusLine(state);
-      setControls({ back: true, playPause: true, forward: true, speed: true, original: state.canReadOriginal, stop: true });
-      $('speed').textContent = `${state.speed || 1}×`;
+      setControls({ back: true, playPause: true, original: state.canReadOriginal, stop: true });
+      showApp(state.app, state.appIcon);
       startPlayer(state);
       break;
     case 'error':
@@ -48,8 +50,8 @@ window.notchman.onState((state) => {
       show('error');
       $('title').textContent = state.title || 'Notchman';
       $('status').textContent = state.message;
-      setControls({ stop: true, upgrade: state.upgrade });
-      scheduleHide(state.upgrade ? 15000 : 6000);
+      setControls({ stop: true });
+      scheduleHide(state.upgrade ? 10000 : 6000);
       break;
     case 'message':
       stopPlayer();
@@ -58,9 +60,18 @@ window.notchman.onState((state) => {
       setControls({ stop: true });
       scheduleHide(state.hideAfter || 5000);
       break;
+    case 'app':
+      // The app they're in, known a moment after the press.
+      if (['working', 'message', 'error'].some((mode) => pillEl.classList.contains(mode))) showApp(state.app, state.appIcon);
+      break;
+    case 'stop':
+      // Stopped from the Shiba or the tray.
+      stopPlayer();
+      pillEl.classList.add('hidden');
+      setHovering(false);
+      break;
     case 'speed':
       if (player) player.setSpeed(state.speed);
-      $('speed').textContent = `${state.speed}×`;
       break;
     default:
       break;
@@ -71,8 +82,8 @@ window.notchman.onState((state) => {
 function statusLine({ source, action, spokenWords, originalWords, speed }) {
   const rate = 150 * (speed || 1);
   const spoken = duration((spokenWords || 0) / rate);
-  if (action !== 'tldr') return `${spoken} · ${source}`;
-  return `${spoken} of ${duration((originalWords || 0) / rate, true)} · ${source}`;
+  if (action !== 'tldr') return `${spoken} • ${source}`;
+  return `${spoken} of ${duration((originalWords || 0) / rate, true)} • ${source}`;
 }
 
 function duration(minutes, rough = false) {
@@ -81,7 +92,28 @@ function duration(minutes, rough = false) {
   return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+// The logo of the app the text came from (ChatGPT, Claude, X, LinkedIn, Grok);
+// otherwise the icon of the app they're using (Chrome, WhatsApp, Word…).
+const APP_LOGOS = new Set(['chatgpt', 'claude', 'x', 'linkedin', 'grok']);
+function showApp(app, icon) {
+  const logo = $('appLogo');
+  if (APP_LOGOS.has(app)) {
+    logo.src = `../../assets/sources/${app}.png`;
+    logo.dataset.app = app;
+  } else if (typeof icon === 'string' && icon.startsWith('data:image/')) {
+    logo.src = icon;
+    logo.dataset.app = 'native';
+  } else {
+    logo.removeAttribute('src');
+    logo.hidden = true;
+    return;
+  }
+  logo.hidden = false;
+}
+
 function show(mode) {
+  // A new press or a plain message starts without a logo; an error keeps the app's.
+  if (mode === 'working' || mode === 'message') showApp(null);
   clearTimeout(hideTimer);
   pillEl.className = `pill ${mode}`;
   $('bar').style.width = '0%';
@@ -103,7 +135,7 @@ function scheduleHide(ms) {
 }
 
 function setControls(visible) {
-  for (const id of ['back', 'playPause', 'forward', 'speed', 'original', 'upgrade', 'stop']) {
+  for (const id of ['back', 'playPause', 'original', 'stop']) {
     $(id).classList.toggle('gone', !visible[id]);
   }
 }
@@ -164,8 +196,16 @@ function createPlayer({ id, pieceCount, speed }) {
       speaking = null;
       next();
     };
+    utterance.onstart = started;
     speech.cancel();
     speech.speak(utterance);
+  }
+
+  let startedSent = false;
+  function started() {
+    if (startedSent) return;
+    startedSent = true;
+    window.notchman.control('audio-started');
   }
 
   async function play(i) {
@@ -193,6 +233,7 @@ function createPlayer({ id, pieceCount, speed }) {
     if (index + 1 < pieceCount) {
       play(index + 1);
     } else {
+      if (!p.done) window.notchman.control('audio-done');
       p.done = true;
       pillEl.classList.remove('speaking');
       $('bar').style.width = '100%';
@@ -203,8 +244,10 @@ function createPlayer({ id, pieceCount, speed }) {
   }
 
   audio.addEventListener('ended', next);
+  audio.addEventListener('playing', started);
 
   audio.addEventListener('timeupdate', () => {
+    if (dragging) return;
     const part = audio.duration ? audio.currentTime / audio.duration : 0;
     $('bar').style.width = `${Math.min(100, ((index + part) / pieceCount) * 100)}%`;
   });
@@ -272,6 +315,15 @@ function createPlayer({ id, pieceCount, speed }) {
     audio.currentTime = Math.max(0, target);
     if (p.done) { p.done = false; audio.play().catch(() => {}); setPaused(false); }
   };
+  /** Jumps to `fraction` (0–1) of the whole thing: the progress bar, clicked or dragged. */
+  p.seekTo = async (fraction) => {
+    const position = Math.max(0, Math.min(0.999, fraction)) * pieceCount;
+    const target = Math.floor(position);
+    if (target !== index || p.done || speaking) await play(target);
+    // The computer voice starts each piece from its beginning; recorded audio jumps inside it.
+    if (!speaking && audio.duration) audio.currentTime = (position - target) * audio.duration;
+    $('bar').style.width = `${(position / pieceCount) * 100}%`;
+  };
   p.setSpeed = (s) => {
     rate = s;
     audio.playbackRate = s;
@@ -309,13 +361,31 @@ function press(id, fn) {
 const SPEEDS = [1, 1.25, 1.5, 1.75, 2, 0.75];
 press('playPause', () => player?.toggle());
 press('back', () => player?.seek(-15));
-press('forward', () => player?.seek(15));
-press('speed', () => {
-  const current = parseFloat($('speed').textContent) || 1;
-  const nextSpeed = SPEEDS[(SPEEDS.indexOf(current) + 1) % SPEEDS.length];
-  $('speed').textContent = `${nextSpeed}×`;
-  player?.setSpeed(nextSpeed);
-  window.notchman.setSpeed(nextSpeed);
+// The progress bar moves through what's playing: click it, or drag along it.
+const seekEl = $('seek');
+let dragging = false;
+const fractionAt = (event) => {
+  const rect = seekEl.querySelector('.progress').getBoundingClientRect();
+  return (event.clientX - rect.left) / rect.width;
+};
+seekEl.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0 || !player) return;
+  event.preventDefault();
+  event.stopPropagation();
+  clearTimeout(hideTimer);
+  dragging = true;
+  seekEl.setPointerCapture(event.pointerId);
+  pillEl.classList.add('seeking');
+  $('bar').style.width = `${Math.max(0, Math.min(1, fractionAt(event))) * 100}%`;
+});
+seekEl.addEventListener('pointermove', (event) => {
+  if (dragging) $('bar').style.width = `${Math.max(0, Math.min(1, fractionAt(event))) * 100}%`;
+});
+seekEl.addEventListener('pointerup', (event) => {
+  if (!dragging) return;
+  dragging = false;
+  pillEl.classList.remove('seeking');
+  player?.seekTo(fractionAt(event));
 });
 press('original', () => window.notchman.control('original'));
 function close(command = 'stop') {
@@ -324,9 +394,10 @@ function close(command = 'stop') {
   setHovering(false);
   window.notchman.control(command);
 }
-press('upgrade', () => close('upgrade'));
 press('stop', close);
-// A message closes with a click anywhere on it.
+// A message or an error closes with a click anywhere on it (the buttons
+// handle their own clicks first).
 pillEl.addEventListener('pointerdown', (event) => {
-  if (event.button === 0 && pillEl.classList.contains('message')) close();
+  if (event.button !== 0 || event.target.closest('button')) return;
+  if (pillEl.classList.contains('message') || pillEl.classList.contains('error')) close();
 });

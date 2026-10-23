@@ -1,24 +1,34 @@
-/* The floating Shiba: just its face. Click it for a small menu (TL;DR, Read
-   aloud, Pick on screen); drag it anywhere. */
+/* The floating Shiba: just its head, small. Click it for a small menu (TL;DR,
+   Read aloud, Pick on screen); drag it anywhere. */
 html, body { background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
 
 /* The Shiba keeps its exact spot on screen; the menu sits beside it, aligned
    to its top, middle or bottom so it always stays on screen (set by main). */
-.buddy { position: absolute; inset: 0; display: flex; align-items: flex-start; gap: 6px; padding: 8px 6px; }
+.buddy { position: absolute; inset: 0; display: flex; align-items: flex-start; gap: 6px; padding: 6px; }
 .buddy.v-center { align-items: center; }
 .buddy.v-bottom { align-items: flex-end; }
 .buddy.left { flex-direction: row-reverse; }
 
 .shiba {
-  position: relative; width: 76px; height: 66px; flex: none; border: 0; background: none; cursor: grab;
-  display: grid; place-items: center; transition: transform 160ms cubic-bezier(.2, .8, .2, 1);
+  position: relative; width: 48px; height: 42px; flex: none; border: 0; padding: 0; background: none; cursor: grab;
+  display: grid; place-items: end center; transition: transform 160ms cubic-bezier(.2, .8, .2, 1);
 }
 .shiba:active { cursor: grabbing; }
-.shiba:hover { transform: translateY(-2px); }
-.shiba .shiba-sprite { pointer-events: none; }
-/* It looks up and bobs gently while a TL;DR is being made. */
+.shiba:hover { transform: translateY(-1px); }
+.shiba .shiba-sprite { pointer-events: none; filter: drop-shadow(0 1px 1.5px rgba(11, 31, 68, 0.25)); }
+/* It bobs gently while a TL;DR is being made, with three thinking dots. */
 .buddy.busy .shiba .shiba-sprite { animation: bob 1.2s ease-in-out infinite; }
-@keyframes bob { 50% { transform: translateY(-2px); } }
+@keyframes bob { 50% { transform: translateY(-1px); } }
+.thought { position: absolute; top: 0; right: -2px; display: flex; gap: 2px; padding: 2px 3px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--line-strong); opacity: 0; transform: scale(0.6); transform-origin: bottom left;
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
+.thought i { width: 3px; height: 3px; border-radius: 50%; background: var(--accent); opacity: 0.25; animation: think 1.2s infinite; }
+.thought i:nth-child(2) { animation-delay: 0.2s; }
+.thought i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes think { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+.buddy.busy .thought { opacity: 1; transform: none; }
+.buddy.left .thought { right: auto; left: -2px; transform-origin: bottom right; }
+@media (prefers-reduced-motion: reduce) { .buddy.busy .shiba .shiba-sprite, .thought i { animation: none; } .thought i { opacity: 0.7; } }
 
 /* The menu: one white card with three rows, like a system menu. Its shadow is
    small so it stays inside the window (a cut-off shadow shows as a box). */
@@ -45,3 +55,9 @@ html, body { background: transparent; overflow: hidden; user-select: none; -webk
 /* Community edition: Pick on screen is a Pro feature. */
 .buddy.community .item .pro { display: inline-flex; }
 .buddy.community #pick .icon, .buddy.community #pick .label { opacity: 0.6; }
+
+/* Stop: in the menu only while Notchman is speaking or making a TL;DR. */
+.menu .stop-item { display: none; }
+.buddy.speaking .menu .stop-item, .buddy.busy .menu .stop-item { display: flex; }
+/* It takes Pick on screen's place, so the menu keeps its size. */
+.buddy.speaking .menu #pick, .buddy.busy .menu #pick { display: none; }

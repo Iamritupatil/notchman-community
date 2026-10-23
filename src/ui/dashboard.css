@@ -105,6 +105,7 @@ main { flex: 1; min-width: 0; overflow-y: auto; padding: 26px 32px 40px; }
 .plan { position: relative; display: flex; flex-direction: column; padding: 20px; }
 .plan .price { margin: 6px 0 16px; color: var(--ink-2); }
 .plan .price b { font: 600 24px/30px var(--font-display); color: var(--ink); letter-spacing: -0.01em; }
+.plan .plan-line { margin: -8px 0 14px; font-size: 13px; line-height: 18px; }
 .plan .checks { flex: 1; }
 .plan.best { border-color: rgba(27, 116, 228, 0.5); }
 .plan.current { border-color: rgba(29, 127, 71, 0.55); }
@@ -124,6 +125,13 @@ main { flex: 1; min-width: 0; overflow-y: auto; padding: 26px 32px 40px; }
 .voice .name { font-weight: 600; width: 82px; flex: none; }
 .voice .voice-detail { flex: 1; color: var(--ink-2); font-size: 13px; }
 .row > span:first-child { font-weight: 500; }
+
+/* The email sheet before checkout */
+#sheetBody.form { display: grid; gap: 8px; }
+#sheetBody.form p:first-child { color: var(--ink); font-weight: 600; font-size: 13px; }
+#sheetBody.form p + p { margin-top: 0; }
+#sheetBody .field-error { color: #c0392b; font-size: 12.5px; }
+#sheetBody .caption a { color: var(--accent-ink); }
 label.row { cursor: pointer; }
 
 @media (max-width: 1000px) {

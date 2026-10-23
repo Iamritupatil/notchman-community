@@ -1,7 +1,7 @@
 'use strict';
 
 // The agreement window: the round tick enables Continue.
-window.createShiba(document.getElementById('shibaArt'), { scale: 3 }).setMood('hello');
+window.createShiba(document.getElementById('shibaArt'), { scale: 4, variant: 'head' }).setMood('hello');
 const box = document.getElementById('agree');
 const label = document.getElementById('agreeBox');
 const button = document.getElementById('continue');

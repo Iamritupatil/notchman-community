@@ -31,6 +31,8 @@ const { split } = require('./core/speech-text');
 const { createHistoryStore } = require('./history-store');
 const links = require('./core/links');
 const { standaloneURL } = require('./core/input');
+const sourceApp = require('./core/source-app');
+const frontApp = require('./front-app');
 const localVoice = require('./local-voice');
 const selection = require('./selection');
 // Pro only: these aren't part of the public Community edition.
@@ -42,6 +44,7 @@ const updater = storeApp ? null : pro('./updater');
 const proClient = pro('./core/api');
 const proDevice = pro('./device-id');
 const proParagraphs = pro('./core/paragraphs');
+const proAnalytics = pro('./core/analytics');
 const PRO_URL = 'https://notchman.app';
 
 if (!app.requestSingleInstanceLock()) {
@@ -73,6 +76,7 @@ let updateAvailable = null;
 let api;
 let keys = null; // Community edition: your own API keys
 let pipeline;
+let analytics = { track() {}, flush: async () => {}, launched() {}, used() {}, listened() {}, hasListened: () => true };
 let tray = null;
 let pill = null;
 let pillReady = Promise.resolve();
@@ -146,6 +150,11 @@ app.whenReady().then(() => {
   const sayHello = () => api.hello?.({ platform: process.platform, arch: process.arch, version: app.getVersion() }).catch(() => {});
   setTimeout(sayHello, 10_000);
   setInterval(sayHello, 24 * 3600_000);
+  // Anonymous usage counts (core/analytics.js); the Community edition sends none.
+  if (proAnalytics) {
+    analytics = proAnalytics.createAnalytics({ settings, enabled: Boolean(api.events), send: (events) => api.events(events) });
+    analytics.launched();
+  }
   pipeline = createPipeline({
     resolve: (url) => links.resolve(url, { render: renderPage }),
     summarize: (text) => api.tldr(text),
@@ -184,6 +193,8 @@ app.whenReady().then(() => {
   }
   registerShortcuts();
   setOpenAtLogin(settings.get('openAtLogin'));
+  // Recently on the free voice (or Community without a cloud voice): get it ready.
+  if (usingLocalVoice()) setTimeout(warmKokoro, 15_000);
   // Start the text recognizer in the background so the first pick is quick.
   screenReader?.warmUp(path.join(app.getPath('userData'), 'ocr'));
   selection.warmUp();
@@ -251,7 +262,10 @@ ipcMain.on('open-link', (_event, url) => {
 });
 
 app.on('window-all-closed', (event) => event.preventDefault()); // keep running in the tray
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  analytics.flush();
+});
 
 // ---------------------------------------------------------------------------
 // Shortcuts
@@ -280,16 +294,33 @@ function pretty(accelerator) {
 // ---------------------------------------------------------------------------
 // The flow: clipboard → (fetch) → (summarize) → voice → play
 
-async function run(action, copiedOverride, { source } = {}) {
+async function run(action, copiedOverride, { source, app: appHint, appIcon: iconHint } = {}) {
   if (!hasAgreed()) {
     openAgreement();
     return;
   }
+  // The icon of the app they're in (Chrome, WhatsApp, Word…), read now, before anything else shows.
+  const frontIcon = iconHint ?? frontApp.frontAppIcon(app);
   const copied = copiedOverride ?? await readClipboard();
+  // The app it came from (its logo shows in the pill): the browser page it was copied from, or the link copied.
+  const fromURL = (appHint === undefined && copiedOverride === undefined ? await sourceApp.clipboardSourceURL(clipboard) : null)
+    || standaloneURL(copied)?.href || null;
+  const webApp = appHint ?? (fromURL ? sourceApp.appFromURL(fromURL) : null);
+  // Any other website: its own logo; otherwise the app's icon.
+  const appIcon = (async () => (!webApp && fromURL ? await frontApp.siteIcon(fromURL) : null) || await frontIcon)();
+  analytics.track('content_submitted');
+  analytics.track(action === 'read' ? 'read_selected' : 'tldr_selected');
+  analytics.used();
   const id = ++sessionCounter;
   session = { id, action, pieces: [], original: null };
   showPill();
   sendState({ kind: 'working', id, action, status: 'Getting content…' });
+  Promise.resolve(appIcon).then((icon) => {
+    if (id === session?.id) {
+      session.appIcon = icon;
+      sendState({ kind: 'app', id, app: webApp, appIcon: icon });
+    }
+  });
   buddyState({ busy: true, speaking: false });
 
   try {
@@ -302,29 +333,41 @@ async function run(action, copiedOverride, { source } = {}) {
       sendState({ kind: 'working', id, action, status });
     }, { source });
     if (id !== session?.id) return; // a newer press replaced this one
-    startPlayback(id, action, prepared);
-    history?.add({ action, title: prepared.title, source: prepared.source, spoken: prepared.spoken, original: prepared.original, highlights: prepared.highlights });
+    const fromApp = sourceApp.appFromSource(prepared.source) || webApp;
+    startPlayback(id, action, { ...prepared, app: fromApp, appIcon: await Promise.resolve(appIcon) });
+    history?.add({ action, title: prepared.title, source: prepared.source, app: fromApp, spoken: prepared.spoken, original: prepared.original, highlights: prepared.highlights });
     dashboard?.webContents.send('dashboard:changed');
   } catch (error) {
     if (id !== session?.id) return;
     buddyState({ busy: false, speaking: false });
     if (error?.reason === 'too_long') {
-      // Over the free length: short enough for the pill, with Upgrade next to it.
-      sendState({ kind: 'error', id, upgrade: true, title: edition.community ? 'Too long for Notchman Community' : 'Too long for the free plan',
+      analytics.track('too_long');
+      // Over the free length: short enough for the pill, with Upgrade next to
+      // it once they've listened to something (never before).
+      sendState({ kind: 'error', id, upgrade: analytics.hasListened(), title: edition.community ? 'Too long for Notchman Community' : 'Too long for the free plan',
                   message: 'Notchman Pro makes TL;DRs of texts over 8,000 characters.' });
       return;
     }
+    analytics.track(error instanceof NothingToRead ? 'nothing_copied' : 'summary_failed');
     sendState({ kind: 'error', id, message: friendly(error) });
   }
+}
+
+/** Stops whatever is playing or being made, and hides the pill (the pill stops its audio). */
+function stopPlayback() {
+  session = null;
+  sendState({ kind: 'stop' });
+  hidePill();
+  buddyState({ speaking: false, busy: false });
 }
 
 /** Plays prepared text (just made, or from History). */
 function startPlayback(id, action, prepared) {
   const pieces = usingLocalVoice() || action === 'read' ? smallPieces(prepared.spoken) : (prepared.pieces || split(prepared.spoken));
-  session = { id, action, pieces, original: prepared.original, source: prepared.source, title: prepared.title };
+  session = { id, action, pieces, original: prepared.original, source: prepared.source, title: prepared.title, app: prepared.app || null, appIcon: prepared.appIcon || null, kokoro: kokoroWarm };
   sendState({ kind: 'working', id, action, status: 'Generating voice…', title: prepared.title, source: prepared.source });
   sendState({
-    kind: 'play', id, action, title: prepared.title, source: prepared.source,
+    kind: 'play', id, action, title: prepared.title, source: prepared.source, app: prepared.app || null, appIcon: prepared.appIcon || null,
     pieceCount: pieces.length, speed: settings.get('speed'), canReadOriginal: action === 'tldr' && Boolean(prepared.original),
     // Listening times at ~150 words a minute, so the time saved is visible.
     spokenWords: wordCount(prepared.spoken), originalWords: wordCount(prepared.original || prepared.spoken),
@@ -338,7 +381,7 @@ function replay(itemId) {
   if (!item) return;
   const id = ++sessionCounter;
   showPill();
-  startPlayback(id, item.action, { title: item.title, source: item.source, spoken: item.spoken, original: item.original });
+  startPlayback(id, item.action, { title: item.title, source: item.source, app: item.app, spoken: item.spoken, original: item.original });
 }
 
 function wordCount(text) {
@@ -403,7 +446,7 @@ async function renderPage(url) {
 // ---------------------------------------------------------------------------
 // The pill
 
-const PILL = { width: 580, height: 72 };
+const PILL = { width: 467, height: 73 }; // the 455 × 65 pill of the design, with room for its edge
 
 function createPill() {
   pill = new BrowserWindow({
@@ -462,6 +505,8 @@ function sendState(state) {
 function showMessage(message, ms = 5000) {
   showPill();
   sendState({ kind: 'message', id: ++sessionCounter, message, hideAfter: ms });
+  // The app in front, so a message has its logo too.
+  frontApp.frontAppIcon(app).then((icon) => { if (icon) sendState({ kind: 'app', appIcon: icon }); });
 }
 
 // Voices, best first: the cloud voice (ElevenLabs), then Kokoro, a free open
@@ -474,6 +519,7 @@ let cloudVoiceFailedAt = (() => {
 })();
 function markCloudVoiceFailed() {
   cloudVoiceFailedAt = Date.now();
+  warmKokoro();
   try { fs.writeFileSync(voiceStateFile(), JSON.stringify({ cloudVoiceFailedAt })); } catch { /* optional */ }
 }
 const usingLocalVoice = () => (api?.community && !api.hasCloudVoice()) || Date.now() - cloudVoiceFailedAt < CLOUD_VOICE_RETRY_MS;
@@ -499,6 +545,21 @@ function smallPieces(text) {
 }
 const kokoroCache = new Map(); // hash(piece) → WAV Buffer
 
+// Kokoro (the free voice on this computer) needs its model loaded first, which
+// can take a while (the first time it's downloaded). Until it has spoken once,
+// sessions use the computer's own voice, which starts at once, and Kokoro gets
+// ready in the background for the next one.
+let kokoroWarm = false;
+let kokoroWarming = null;
+function warmKokoro() {
+  if (kokoroWarm || kokoroWarming) return;
+  kokoroWarming = kokoroAudio('Ready.')
+    .then(() => { kokoroWarm = true; })
+    .catch((error) => console.error('Kokoro warm-up failed', error))
+    .finally(() => { kokoroWarming = null; });
+}
+const KOKORO_PIECE_MS = 8000;
+
 async function kokoroAudio(text) {
   const key = hash(text);
   if (kokoroCache.has(key)) return kokoroCache.get(key);
@@ -521,8 +582,18 @@ ipcMain.handle('piece', async (_event, id, index) => {
       markCloudVoiceFailed();
     }
   }
+  // Kokoro isn't ready yet: the computer's voice reads this session at once.
+  if (!session.kokoro) {
+    warmKokoro();
+    return { speak: text };
+  }
   try {
-    return { audio: await kokoroAudio(text), type: 'audio/wav' };
+    // Never leave people waiting in silence: past a few seconds, the computer's voice.
+    const audio = await Promise.race([
+      kokoroAudio(text),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Kokoro is slow')), KOKORO_PIECE_MS)),
+    ]);
+    return { audio, type: 'audio/wav' };
   } catch (error) {
     console.error('Kokoro failed, using the system voice', error);
     return { speak: text };
@@ -542,9 +613,7 @@ ipcMain.on('control', (_event, command) => {
       buddyState({ speaking: false, busy: false });
       break;
     case 'stop':
-      session = null;
-      hidePill();
-      buddyState({ speaking: false, busy: false });
+      stopPlayback();
       break;
     case 'original':
       // The full original, from what's already fetched: no new download.
@@ -553,7 +622,15 @@ ipcMain.on('control', (_event, command) => {
     case 'settings':
       openSettings();
       break;
+    case 'audio-started':
+      analytics.track('audio_started');
+      break;
+    case 'audio-done':
+      analytics.track('audio_completed');
+      analytics.listened();
+      break;
     case 'upgrade':
+      analytics.track('pro_button_tap');
       session = null;
       hidePill();
       buddyState({ speaking: false, busy: false });
@@ -567,7 +644,7 @@ ipcMain.on('control', (_event, command) => {
 // ---------------------------------------------------------------------------
 // The floating Shiba
 
-const BUDDY = { width: 88, height: 82, menuWidth: 206, openHeight: 140 };
+const BUDDY = { width: 60, height: 54, menuWidth: 206, openHeight: 140 };
 let buddyOpen = false;
 let buddyCloseTimer = null;
 let buddyLook = { busy: false, speaking: false, valign: 'center', community: edition.community };
@@ -729,6 +806,10 @@ ipcMain.on('buddy', (_event, command) => {
       setBuddyOpen(false);
       startPicker('tldr');
       break;
+    case 'stop':
+      setBuddyOpen(false);
+      stopPlayback();
+      break;
     case 'menu':
       if (tray && trayMenu) tray.popUpContextMenu(trayMenu());
       break;
@@ -742,14 +823,19 @@ ipcMain.on('buddy', (_event, command) => {
  * (copied for you, no screenshot), or what you copied if nothing is selected.
  */
 async function listenToSelection(action) {
+  // The app in front now (the Shiba never takes focus), before the copy.
+  const appIcon = frontApp.frontAppIcon(app);
   let selected = '';
   try {
     selected = await selection.selectedText(clipboard);
   } catch {
     selected = '';
   }
-  if (selected) return run(action, selected, { source: 'Selected text' });
-  return run(action);
+  if (selected) {
+    const fromURL = selection.sourceURL();
+    return run(action, selected, { source: 'Selected text', app: fromURL ? sourceApp.appFromURL(fromURL) : null, appIcon });
+  }
+  return run(action, undefined, { appIcon });
 }
 
 // ---------------------------------------------------------------------------
@@ -785,6 +871,7 @@ async function startPicker(action) {
     return;
   }
   if (!picker || pickerState) return;
+  analytics.track('pick_selected');
   const anchor = buddy ? shibaPosition() : screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(anchor);
   // Notchman's own windows stay out of the screenshot.
@@ -855,6 +942,7 @@ function createTray() {
   tray = new Tray(image.resize({ width: 16, height: 16 }));
   tray.setToolTip('Notchman');
   const menu = () => Menu.buildFromTemplate([
+    ...(session ? [{ label: 'Stop', click: stopPlayback }, { type: 'separator' }] : []),
     { label: screenReader ? 'TL;DR a paragraph on screen…' : 'TL;DR a paragraph on screen… (Pro)', click: () => startPicker('tldr') },
     { label: `TL;DR what I copied   ${pretty(settings.get('tldrShortcut'))}`, click: () => run('tldr') },
     { label: `Read what I copied   ${pretty(settings.get('readShortcut'))}`, click: () => run('read') },
@@ -938,27 +1026,40 @@ ipcMain.handle('dashboard:usage', async () => {
   }
 });
 ipcMain.handle('dashboard:history', () => history.list());
+// The Notchman window's own events: the Plan screen seen, an Upgrade button tapped.
+ipcMain.on('track', (_event, name) => {
+  if (name === 'paywall_viewed' || name === 'pro_button_tap') analytics.track(name);
+});
 ipcMain.on('dashboard:action', (_event, action) => {
   if (action === 'tldr' || action === 'read') run(action);
   if (action === 'pick') startPicker('tldr');
   if (action === 'pro') shell.openExternal(PRO_URL);
 });
-ipcMain.handle('dashboard:check-update', () => (updater ? updater.check() : { ok: false, community: edition.community, store: storeApp }));
-ipcMain.handle('dashboard:install-update', () => (updater ? updater.install() : { ok: false, message: 'Update with git pull.' }));
+// Community: updates from its GitHub folder (git pull + npm install), from the same buttons.
+const communityUpdater = edition.community ? require('./community-updater') : null;
+ipcMain.handle('dashboard:check-update', () => (updater ? updater.check() : communityUpdater ? communityUpdater.check() : { ok: false, store: storeApp }));
+ipcMain.handle('dashboard:install-update', () => (updater ? updater.install() : communityUpdater ? communityUpdater.install() : { ok: false, message: 'Updates come from the Microsoft Store.' }));
 ipcMain.handle('dashboard:history-remove', (_event, id) => { history.remove(id); return history.list(); });
 ipcMain.handle('dashboard:history-clear', () => { history.clear(); return []; });
 ipcMain.on('dashboard:replay', (_event, id) => replay(id));
-ipcMain.handle('dashboard:upgrade', async (_event, plan) => {
+ipcMain.handle('dashboard:upgrade', async (_event, plan, email) => {
   if (edition.community) {
     shell.openExternal(PRO_URL);
     return { ok: true };
   }
   if (plan !== 'pro' && plan !== 'proplus') return { ok: false };
+  analytics.track('pro_selected');
+  analytics.track(`pro_selected_${plan}`);
+  // The buyer's email, for the receipt (filled in at Dodo); remembered for next time.
+  const buyerEmail = typeof email === 'string' ? email.trim().slice(0, 254) : '';
+  if (buyerEmail) settings.set({ email: buyerEmail });
   // Dodo Payments checkout, made by our server for this install.
   try {
-    const { url } = await api.checkout(plan);
+    const { url } = await api.checkout(plan, buyerEmail || undefined);
     if (/^https:\/\//.test(url)) {
       shell.openExternal(url);
+      analytics.track('checkout_opened');
+      analytics.flush();
       return { ok: true };
     }
   } catch (error) {
@@ -967,14 +1068,18 @@ ipcMain.handle('dashboard:upgrade', async (_event, plan) => {
       shell.openExternal(link.replace('{userId}', encodeURIComponent(settings.get('installId'))));
       return { ok: true };
     }
+    analytics.track('checkout_failed');
     return { ok: false, message: friendly(error) };
   }
+  analytics.track('checkout_failed');
   return { ok: false, message: "Checkout couldn't be opened. Please try again." };
 });
 
 ipcMain.handle('settings:get', () => ({
   edition: edition.community ? 'community' : 'pro',
   settings: { ...settings.all(), showBuddy: settings.get('showBuddy') !== false },
+  // Upgrade is offered once they've listened to something all the way through.
+  listenedOnce: analytics.hasListened(),
   canOpenAtLogin,
   upgradeConfigured: Boolean(config.upgradeLinks.pro || config.upgradeLinks.proplus),
   voices: config.voices,
@@ -991,6 +1096,7 @@ ipcMain.handle('settings:set', (_event, changes) => {
   if (config.shortcutChoices.read.includes(changes.readShortcut)) allowed.readShortcut = changes.readShortcut;
   if (typeof changes.openAtLogin === 'boolean') allowed.openAtLogin = changes.openAtLogin;
   if (typeof changes.showBuddy === 'boolean') allowed.showBuddy = changes.showBuddy;
+  if (typeof changes.shareStats === 'boolean') allowed.shareStats = changes.shareStats;
   const updated = settings.set(allowed);
   if ('tldrShortcut' in allowed || 'readShortcut' in allowed) {
     registerShortcuts();

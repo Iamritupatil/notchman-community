@@ -75,6 +75,8 @@
     $('openAtLogin').onchange = () => save({ openAtLogin: $('openAtLogin').checked });
     $('showBuddy').checked = settings.showBuddy !== false;
     $('showBuddy').onchange = () => save({ showBuddy: $('showBuddy').checked });
+    $('shareStats').checked = settings.shareStats !== false;
+    $('shareStats').onchange = () => save({ shareStats: $('shareStats').checked });
   }
 
   window.notchman.getSettings().then((initial) => {

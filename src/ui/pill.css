@@ -1,49 +1,68 @@
-/* The pill at the top of the screen: messages, progress and the player. Dark,
-   like the iPhone's Dynamic Island, with the pixel Shiba. */
-:root { --pill: #0b0c10; --pill-text: #f3f5f9; --pill-muted: #a3a9b6; --pill-button: rgba(255, 255, 255, 0.09); --pill-button-hover: rgba(255, 255, 255, 0.17); }
+/* The notch pill, exactly as in the Figma design (Notchman new notch design):
+   455 × 65, 22 px corners, #0C0C0C at 20% with Figma's glass effect, Inter
+   Regular 12 / 8 px in white, a #3A9BFF progress bar, blue Liquid Glass
+   buttons and #404041 round buttons. */
+@font-face { font-family: "Inter"; src: url("../../assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+:root { --glass-blue: #047df4; }
 html, body { background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
 
 .pill {
-  position: absolute; inset: 4px 6px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 10px;
-  background: var(--pill); color: var(--pill-text); border-radius: 32px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  position: absolute; left: 6px; top: 4px; width: 455px; height: 65px; box-sizing: border-box;
+  display: flex; align-items: flex-start; padding: 0 17px 0 70px;
+  font-family: "Inter", system-ui, sans-serif; font-weight: 400; color: #fff;
+  background: rgba(12, 12, 12, 0.2); border-radius: 22px;
+  /* Figma's glass effect (radius 4): a soft blur behind and a thin light rim,
+     a little brighter along the top and left, as in the design render. */
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15), inset 1px 1px 0 rgba(255, 255, 255, 0.07);
   transition: transform 220ms cubic-bezier(.2, .8, .2, 1), opacity 180ms ease;
 }
 .pill.hidden { transform: translateY(-110%); opacity: 0; }
 
-.mascot { width: 42px; height: 42px; flex: none; object-fit: contain; image-rendering: pixelated; }
-.pill.speaking .mascot { animation: bob 900ms ease-in-out infinite; }
-.pill.working .mascot { animation: think 1.2s ease-in-out infinite; }
-@keyframes bob { 50% { transform: translateY(-2px) rotate(-2deg); } }
-@keyframes think { 50% { transform: rotate(5deg); } }
+/* The logo of the app the text came from, at its place and size in the design. */
+.lead { position: absolute; left: 0; top: 0; width: 70px; height: 65px; pointer-events: none; }
+.app-logo[hidden] { display: none; }
+.app-logo { position: absolute; }
+.app-logo[data-app="chatgpt"] { left: -5px; top: -8px; width: 81px; height: 81px; }
+.app-logo[data-app="claude"] { left: 14px; top: 12px; width: 41px; height: 41px; }
+.app-logo[data-app="x"] { left: 9px; top: 7px; width: 51px; height: 51px; }
+.app-logo[data-app="linkedin"] { left: 12px; top: 10.5px; width: 44px; height: 44px; }
+.app-logo[data-app="grok"] { left: 8px; top: 7.5px; width: 52px; height: 50px; }
+/* Any other app: its own icon (Chrome, WhatsApp, Word…), at the same place. */
+.app-logo[data-app="native"] { left: 13px; top: 11.5px; width: 42px; height: 42px; object-fit: contain; }
 
-.middle { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.title { font-size: 13px; line-height: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.status { font-size: 12px; line-height: 15px; color: var(--pill-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pill.error .status { color: #ffc27a; }
-.pill.error .progress { visibility: hidden; }
+.middle { width: 190px; flex: none; margin-top: 13px; }
+.title { font-size: 12px; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status { margin-top: 2px; font-size: 8px; line-height: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill.error .seek { visibility: hidden; }
 
-/* A message: up to two lines, and a click anywhere closes it. */
-.pill.message { cursor: pointer; }
-.pill.message .title { white-space: normal; font-weight: 500; line-height: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.pill.message .status, .pill.message .progress { display: none; }
-
-.progress { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
-.bar { height: 100%; width: 0; background: #4aa6ff; border-radius: 2px; transition: width 250ms linear; }
+/* The progress bar: click or drag it to move through what's playing. */
+.seek { margin-top: 1px; padding: 5px 0; width: 181px; cursor: pointer; }
+.progress { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.bar { height: 100%; width: 0; background: #3a9bff; border-radius: 3px; transition: width 250ms linear; }
+.seeking .bar { transition: none; }
 .pill.working .bar { width: 35% !important; animation: slide 1.1s ease-in-out infinite; }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
-.controls { display: flex; align-items: center; gap: 4px; flex: none; }
-.controls button {
-  position: relative; width: 32px; height: 32px; border: 0; border-radius: 16px; display: grid; place-items: center;
-  background: var(--pill-button); color: var(--pill-text); cursor: pointer; transition: background-color 120ms ease;
+/* A message: up to two lines, and a click anywhere closes it. */
+.pill.message, .pill.error { cursor: pointer; }
+.pill.message .title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pill.message .status, .pill.message .seek { display: none; }
+
+.controls { position: absolute; right: 17px; top: 14px; display: flex; align-items: center; gap: 7px; }
+.controls button { position: relative; border: 0; padding: 0; margin: 0; background: none; color: #fff; cursor: pointer; display: grid; place-items: center; font: inherit; }
+.controls button svg { display: block; pointer-events: none; }
+/* Liquid Glass, prominent: the blue pause / play and Full buttons. */
+.controls .glass {
+  height: 35px; border-radius: 1000px;
+  background: linear-gradient(180deg, #007cf3 0%, #0084fb 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(255, 255, 255, 0.12);
 }
-.controls button:hover { background: var(--pill-button-hover); }
-.controls button .icon { width: 17px; height: 17px; stroke-width: 1.9; }
-.controls button.text { width: auto; padding: 0 11px; font-size: 12px; font-weight: 600; }
-.controls button.main { width: 36px; height: 36px; border-radius: 18px; background: #1b74e4; color: #fff; }
-.controls button.main:hover { background: #2a82ef; }
-.controls button.accent { background: #1b74e4; color: #fff; }
-.controls button.accent:hover { background: #2a82ef; }
-.controls button.main .icon { width: 18px; height: 18px; }
-.controls button .n { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -42%); font-size: 7px; font-weight: 700; }
-#speed { min-width: 44px; }
+.controls #playPause { width: 35px; }
+.controls #playPause svg { position: absolute; left: -1px; top: -1px; }
+.controls .glass.text { width: 42px; height: 34px; font-size: 15px; letter-spacing: -0.2px; }
+.controls .round.replay { width: 37px; height: 37px; }
+.controls .round.close { width: 35px; height: 35px; border-radius: 50%; background: #404041; margin-left: -1px; }
+.controls button:hover { filter: brightness(1.12); }
+.controls button:active { filter: brightness(0.92); }

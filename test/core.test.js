@@ -182,3 +182,43 @@ test('a TL;DR keeps the key points the server sends, for History', async () => {
   const read = await pipeline.prepare('We launched after 14 months of work, and we cut 40% of the scope to get there. Here is what we learned along the way.', 'read');
   assert.deepEqual(read.highlights, []);
 });
+
+
+// --- Which app the text came from (its logo shows in the pill) -----------------
+{
+  const { appFromURL, appFromSource, clipboardSourceURL } = require('../src/core/source-app');
+
+  test('source app: logos for ChatGPT, Claude, X, LinkedIn and Grok pages; none for others', async () => {
+    assert.equal(appFromURL('https://chatgpt.com/c/123'), 'chatgpt');
+    assert.equal(appFromURL('https://claude.ai/chat/1'), 'claude');
+    assert.equal(appFromURL('https://x.com/a/status/1'), 'x');
+    assert.equal(appFromURL('https://www.linkedin.com/feed/'), 'linkedin');
+    assert.equal(appFromURL('https://grok.com/'), 'grok');
+    assert.equal(appFromURL('https://example.com/'), null);
+    assert.equal(appFromSource('LinkedIn'), 'linkedin');
+    assert.equal(appFromSource('Copied text'), null);
+    const windowsClipboard = { read: async (f) => (f === 'HTML Format' ? 'Version:0.9\r\nSourceURL:https://chatgpt.com/c/9\r\n<html>' : '') };
+    assert.equal(await clipboardSourceURL(windowsClipboard), 'https://chatgpt.com/c/9');
+    const macClipboard = { read: async (f) => (f === 'org.chromium.source-url' ? 'https://claude.ai/chat/2' : '') };
+    assert.equal(await clipboardSourceURL(macClipboard), 'https://claude.ai/chat/2');
+    assert.equal(await clipboardSourceURL({ read: async () => { throw new Error('no'); } }), null);
+  });
+}
+
+// --- A website's own logo, for pages without one in the app ----------------------
+{
+  const { siteIcon } = require('../src/front-app');
+  const png = Buffer.alloc(200, 1);
+  const respond = (ok, type, body) => ({ ok, headers: { get: () => type }, arrayBuffer: async () => body });
+
+  test('site icon: the touch icon, else the favicon, else nothing', async () => {
+    const asked = [];
+    const touch = async (url) => { asked.push(url); return respond(true, 'image/png', png); };
+    assert.match(await siteIcon('https://medium.com/@a/post', touch), /^data:image\/png;base64,/);
+    assert.deepEqual(asked, ['https://medium.com/apple-touch-icon.png']);
+    const onlyFavicon = async (url) => (url.endsWith('.ico') ? respond(true, 'image/x-icon', png) : respond(false, 'text/html', Buffer.alloc(0)));
+    assert.match(await siteIcon('https://example.org/x', onlyFavicon), /^data:image\/x-icon;base64,/);
+    assert.equal(await siteIcon('https://example.org/x', async () => { throw new Error('offline'); }), null);
+    assert.equal(await siteIcon('not a url', touch), null);
+  });
+}

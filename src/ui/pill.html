@@ -2,29 +2,33 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' blob:; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' blob:; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'">
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="pill.css">
 </head>
 <body>
+  <!-- The notch pill, as designed in Figma (Notchman new notch design): 455 × 65. -->
   <div id="pill" class="pill hidden">
-    <img class="mascot" src="../../assets/shiba-face.png" alt="">
+    <span class="lead" aria-hidden="true"><img class="app-logo" id="appLogo" alt="" hidden></span>
     <div class="middle">
       <div class="title" id="title">Notchman</div>
       <div class="status" id="status"></div>
-      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="seek" id="seek" title="Click or drag to move through it"><div class="progress"><div class="bar" id="bar"></div></div></div>
     </div>
     <div class="controls" id="controls">
-      <button id="back" title="Back 15 seconds" aria-label="Back 15 seconds"><i data-icon="back"></i><span class="n">15</span></button>
-      <button id="playPause" class="main" title="Pause" aria-label="Pause"><span id="iconPause"><i data-icon="pause"></i></span><span id="iconPlay" class="gone"><i data-icon="play"></i></span></button>
-      <button id="forward" title="Forward 15 seconds" aria-label="Forward 15 seconds"><i data-icon="forward"></i><span class="n">15</span></button>
-      <button id="speed" class="text" title="Speed">1×</button>
-      <button id="original" class="text" title="Read the full original">Full text</button>
-      <button id="upgrade" class="text accent" title="See Notchman Pro">Upgrade</button>
-      <button id="stop" title="Close" aria-label="Close"><i data-icon="close"></i></button>
+      <button id="playPause" class="glass" title="Pause" aria-label="Pause">
+        <svg id="iconPause" width="37" height="37" viewBox="0 0 39 39" fill="none" aria-hidden="true"><path d="M16.9583 11.7917H12.3333V27.2083H16.9583V11.7917ZM20.0417 27.2083H24.6667V11.7917H20.0417V27.2083Z" fill="white"/></svg>
+        <svg id="iconPlay" class="gone" width="37" height="37" viewBox="0 0 39 39" fill="none" aria-hidden="true"><path d="M15 11.79V27.21L26.56 19.5L15 11.79Z" fill="white"/></svg>
+      </button>
+      <button id="back" class="round replay" title="Back 15 seconds" aria-label="Back 15 seconds">
+        <svg width="37" height="37" viewBox="0 0 37 37" fill="none" aria-hidden="true"><circle cx="18.5" cy="18.5" r="18.5" fill="#404041"/><path d="M24.1317 13.2779C22.3149 11.5354 19.9275 10.7744 17.6043 10.9631L17.541 7.93166L13.6376 12.0015L17.7074 15.905L17.6487 13.093C19.43 12.911 21.2734 13.466 22.6681 14.8038C25.1978 17.23 25.2815 21.2423 22.8552 23.772C20.429 26.3016 16.4167 26.3853 13.887 23.9591C12.6234 22.7471 11.9707 21.1369 11.9345 19.5138L9.82319 19.5578C9.8707 21.7227 10.7403 23.8705 12.4235 25.485C15.7948 28.7184 21.1477 28.6067 24.3811 25.2355C27.6146 21.8642 27.5029 16.5113 24.1317 13.2779Z" fill="white"/></svg>
+      </button>
+      <button id="original" class="glass text" title="Read the full original">Full</button>
+      <button id="stop" class="round close" title="Close" aria-label="Close">
+        <svg width="29" height="29" viewBox="0 0 29 29" fill="none" aria-hidden="true"><path d="M16.2038 14.5L21.3996 9.31625C21.6271 9.08872 21.7549 8.78011 21.7549 8.45833C21.7549 8.13655 21.6271 7.82795 21.3996 7.60042C21.1721 7.37288 20.8634 7.24506 20.5417 7.24506C20.2199 7.24506 19.9113 7.37288 19.6838 7.60042L14.5 12.7963L9.31625 7.60042C9.08872 7.37288 8.78012 7.24506 8.45834 7.24506C8.13655 7.24506 7.82795 7.37288 7.60042 7.60042C7.37289 7.82795 7.24506 8.13655 7.24506 8.45833C7.24506 8.78011 7.37289 9.08872 7.60042 9.31625L12.7963 14.5L7.60042 19.6838C7.48716 19.7961 7.39727 19.9297 7.33593 20.077C7.27458 20.2242 7.243 20.3822 7.243 20.5417C7.243 20.7012 7.27458 20.8591 7.33593 21.0064C7.39727 21.1536 7.48716 21.2873 7.60042 21.3996C7.71275 21.5128 7.84639 21.6027 7.99364 21.6641C8.14089 21.7254 8.29882 21.757 8.45834 21.757C8.61785 21.757 8.77579 21.7254 8.92303 21.6641C9.07028 21.6027 9.20392 21.5128 9.31625 21.3996L14.5 16.2037L19.6838 21.3996C19.7961 21.5128 19.9297 21.6027 20.077 21.6641C20.2242 21.7254 20.3822 21.757 20.5417 21.757C20.7012 21.757 20.8591 21.7254 21.0064 21.6641C21.1536 21.6027 21.2873 21.5128 21.3996 21.3996C21.5128 21.2873 21.6027 21.1536 21.6641 21.0064C21.7254 20.8591 21.757 20.7012 21.757 20.5417C21.757 20.3822 21.7254 20.2242 21.6641 20.077C21.6027 19.9297 21.5128 19.7961 21.3996 19.6838L16.2038 14.5Z" fill="white"/></svg>
+      </button>
     </div>
   </div>
-  <script src="icons.js"></script>
   <script src="pill.js"></script>
 </body>
 </html>

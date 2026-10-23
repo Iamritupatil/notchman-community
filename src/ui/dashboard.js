@@ -11,17 +11,21 @@
   let historyItems = [];
   let selectedId = null;
   let community = false;
+  // Upgrade isn't offered until they've listened to something all the way through.
+  let listenedOnce = true;
 
   function show(tab) {
     for (const button of document.querySelectorAll('.nav-item')) button.classList.toggle('active', button.dataset.tab === tab);
     for (const panel of document.querySelectorAll('.panel')) panel.classList.toggle('active', panel.dataset.panel === tab);
     if (tab === 'home' || tab === 'plan') loadUsage();
+    if (tab === 'plan' && !community) window.notchman.track('paywall_viewed');
     if (tab === 'home' || tab === 'history') loadHistory();
     if (tab === 'about') checkUpdates();
   }
 
   for (const button of document.querySelectorAll('.nav-item')) button.addEventListener('click', () => show(button.dataset.tab));
   for (const link of document.querySelectorAll('[data-goto]')) link.addEventListener('click', () => show(link.dataset.goto));
+  $('sideUpgrade').addEventListener('click', () => window.notchman.track('pro_button_tap'));
   for (const action of document.querySelectorAll('[data-action]')) {
     action.addEventListener('click', () => window.notchman.dashboardAction(action.dataset.action));
   }
@@ -53,6 +57,56 @@
   }
   const tell = (title, body) => ask({ title, body, cancel: null });
 
+  // The buyer's email, asked before checkout: it's filled in at Dodo and lets
+  // us send the receipt and help if anything goes wrong. Remembered for next time.
+  let savedEmail = '';
+  const EMAIL = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/;
+  function askEmail(planName) {
+    const sheet = $('sheet');
+    const input = el('input', 'input');
+    Object.assign(input, { type: 'email', placeholder: 'you@example.com', autocomplete: 'email', value: savedEmail, spellcheck: false });
+    const error = el('p', 'field-error gone', "That email doesn't look right.");
+    const privacy = el('p', 'caption');
+    privacy.append("For your receipt, and so we can help if anything goes wrong. We never send spam. ",
+      Object.assign(el('a', '', 'Privacy Policy'), { href: 'https://notchman.app/privacy', target: '_blank' }));
+    $('sheetTitle').textContent = `Get Notchman ${planName}`;
+    $('sheetBody').replaceChildren(el('p', '', 'Your email'), input, error, privacy);
+    $('sheetBody').classList.add('form');
+    $('sheetConfirm').textContent = 'Continue to payment';
+    $('sheetConfirm').className = 'btn btn-primary';
+    $('sheetCancel').textContent = 'Cancel';
+    $('sheetCancel').classList.remove('gone');
+    sheet.showModal();
+    input.focus();
+    input.select();
+    return new Promise((resolve) => {
+      const done = (answer) => {
+        $('sheetConfirm').onclick = null;
+        $('sheetCancel').onclick = null;
+        input.onkeydown = null;
+        sheet.onclose = null;
+        $('sheetBody').classList.remove('form');
+        if (sheet.open) sheet.close();
+        resolve(answer);
+      };
+      const submit = () => {
+        const email = input.value.trim();
+        if (!EMAIL.test(email)) {
+          error.classList.remove('gone');
+          input.focus();
+          return;
+        }
+        savedEmail = email;
+        done(email);
+      };
+      input.oninput = () => error.classList.add('gone');
+      input.onkeydown = (event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } };
+      $('sheetConfirm').onclick = submit;
+      $('sheetCancel').onclick = () => done(null);
+      sheet.onclose = () => done(null);
+    });
+  }
+
   // --- Plan and usage ---------------------------------------------------------
 
   const percent = (used, limit) => (limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0);
@@ -60,6 +114,7 @@
   const minutes = (c) => Math.max(0, Math.round(c / 900));
 
   async function loadUsage() {
+    if (!community) listenedOnce = (await window.notchman.getSettings()).listenedOnce !== false;
     const usage = await window.notchman.usage();
     if (usage.ok && usage.plan === 'community') {
       $('planLead').textContent = 'Free for personal, non-commercial use.';
@@ -78,7 +133,7 @@
     const left = Math.max(0, (usage.voiceLimit || 0) - (usage.voiceUsed || 0));
     const period = usage.voicePeriod === 'day' ? 'today' : usage.voicePeriod === 'trial' ? 'in your preview' : 'this month';
     $('planChip').textContent = `${plan} plan`;
-    $('sideUpgrade').classList.toggle('gone', usage.plan === 'proplus');
+    $('sideUpgrade').classList.toggle('gone', usage.plan === 'proplus' || (usage.plan === 'free' && !listenedOnce));
     $('sideMeter').style.width = `${100 - percent(usage.voiceUsed, usage.voiceLimit)}%`;
     $('sideVoice').textContent = usage.voiceLimit ? `About ${minutes(left)} min of Notchman voice left` : 'Free voice on this computer';
     $('voiceCount').textContent = usage.voiceLimit ? `${minutes(left)} min` : '–';
@@ -86,7 +141,9 @@
     $('voiceNote').textContent = usage.voiceLimit ? 'Notchman voice left' : 'Free voice on this computer';
     $('voiceNote').title = usage.voiceLimit ? `${chars(left)} characters left ${period}` : '';
     $('planLead').textContent = usage.plan === 'free'
-      ? "You're on Free. TL;DRs always work with the free voice on your computer. Upgrade for the natural Notchman voice."
+      ? (listenedOnce
+        ? "You're on Free. TL;DRs always work with the free voice on your computer. Upgrade for the natural Notchman voice."
+        : "You're on Free. Try it first: select some text anywhere and press your TL;DR shortcut. Upgrade only if you want more.")
       : `You're on ${plan}, with about ${minutes(left)} min of Notchman voice left ${period}.`;
     for (const card of document.querySelectorAll('.plan')) {
       const current = card.dataset.plan === usage.plan;
@@ -118,10 +175,12 @@
 
   for (const button of document.querySelectorAll('[data-upgrade]')) {
     button.addEventListener('click', async () => {
+      const email = await askEmail(PLAN_NAMES[button.dataset.upgrade]);
+      if (!email) return;
       const label = button.textContent;
       button.textContent = 'Opening checkout…';
       button.disabled = true;
-      const result = await window.notchman.upgrade(button.dataset.upgrade);
+      const result = await window.notchman.upgrade(button.dataset.upgrade, email);
       button.textContent = result.ok ? 'Finish in your browser' : label;
       button.disabled = false;
       if (!result.ok) tell("Checkout didn't open", result.message || 'Please try again.');
@@ -258,10 +317,6 @@
   let update = null;
 
   function showUpdate(info) {
-    if (info && info.community) {
-      $('updateStatus').textContent = 'Community edition';
-      return;
-    }
     if (info && info.store) {
       $('updateStatus').textContent = 'Updates come from the Microsoft Store.';
       $('checkUpdate').classList.add('gone');
@@ -274,6 +329,12 @@
     if (update) {
       const label = update.ready ? 'Restart to update' : 'Update now';
       for (const b of [$('installUpdate'), $('bannerInstall')]) if (!b.disabled) b.textContent = label;
+      if (community) {
+        const changes = `${update.changes} new change${update.changes === 1 ? '' : 's'}`;
+        $('updateText').textContent = `A new version of Notchman Community is on GitHub (${changes}). Update now, and Notchman restarts.`;
+        $('updateStatus').textContent = `${changes} on GitHub.`;
+        return;
+      }
       $('updateText').textContent = update.ready
         ? `Notchman ${update.version} is downloaded. It installs next time Notchman starts.`
         : `Notchman ${update.version} is available. You have ${update.current}.`;
@@ -283,12 +344,12 @@
     } else if (info && info.ok) {
       $('updateStatus').textContent = "You're up to date.";
     } else if (info) {
-      $('updateStatus').textContent = "Couldn't check for updates. Check your connection.";
+      $('updateStatus').textContent = info.message || "Couldn't check for updates. Check your connection.";
     }
   }
 
   async function checkUpdates() {
-    if (!community) $('updateStatus').textContent = 'Checking for updates…';
+    $('updateStatus').textContent = 'Checking for updates…';
     showUpdate(await window.notchman.checkUpdate());
   }
 
@@ -343,8 +404,8 @@
 
   // --- Start ------------------------------------------------------------------
 
-  // The Shiba on Home waves hello each time the window opens.
-  const heroShiba = window.createShiba($('heroShiba'), { scale: 2 });
+  // The Shiba on Home says hello each time the window opens.
+  const heroShiba = window.createShiba($('heroShiba'), { scale: 3, variant: 'head' });
   heroShiba.setMood('hello');
 
   window.notchman.onDashboard(({ tab, changed }) => {
@@ -362,6 +423,7 @@
     $('homeTldrKey').textContent = pretty(s.settings.tldrShortcut);
     $('homeReadKey').textContent = pretty(s.settings.readShortcut);
     $('installId').textContent = s.settings.installId || '';
+    savedEmail = s.settings.email || '';
     $('versionNumber').textContent = s.version;
   });
   window.notchman.checkUpdate().then(showUpdate);
