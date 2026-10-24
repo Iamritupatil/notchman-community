@@ -6,6 +6,8 @@
 
 const $ = (id) => document.getElementById(id);
 const pillEl = $('pill');
+// Windows 11 frosts what's behind the pill itself (see main.js).
+if (new URLSearchParams(location.search).get('glass') === 'system') document.documentElement.classList.add('system-glass');
 
 let player = null;
 let hideTimer = null;

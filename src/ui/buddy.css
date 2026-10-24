@@ -30,12 +30,16 @@ html, body { background: transparent; overflow: hidden; user-select: none; -webk
 .buddy.left .thought { right: auto; left: -2px; transform-origin: bottom right; }
 @media (prefers-reduced-motion: reduce) { .buddy.busy .shiba .shiba-sprite, .thought i { animation: none; } .thought i { opacity: 0.7; } }
 
-/* The menu: one white card with three rows, like a system menu. Its shadow is
-   small so it stays inside the window (a cut-off shadow shows as a box). */
+/* The menu: a glass card like the pill (dark glass, a thin light rim, white
+   text, blue icons). Its shadow is small so it stays inside the window (a
+   cut-off shadow shows as a box). */
+@font-face { font-family: "Inter"; src: url("../../assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
 .menu {
-  width: 194px; padding: 5px; display: grid; gap: 1px; border-radius: 12px;
-  background: var(--surface); border: 1px solid var(--line-strong);
-  box-shadow: 0 1px 2px rgba(11, 31, 68, 0.1), 0 3px 8px rgba(11, 31, 68, 0.1);
+  width: 194px; padding: 6px; display: grid; gap: 2px; border-radius: 18px;
+  font-family: "Inter", system-ui, sans-serif; color: #fff;
+  background-color: rgba(12, 12, 12, 0.78);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 55%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15), inset 1px 1px 0 rgba(255, 255, 255, 0.07), 0 2px 6px rgba(0, 0, 0, 0.18);
   opacity: 0; transform: translateX(-6px) scale(0.97); transform-origin: left center; pointer-events: none;
   transition: opacity 140ms ease, transform 180ms cubic-bezier(.2, .8, .2, 1);
 }
@@ -43,13 +47,13 @@ html, body { background: transparent; overflow: hidden; user-select: none; -webk
 .buddy.open .menu { opacity: 1; transform: none; pointer-events: auto; }
 
 .item {
-  display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 8px;
-  background: none; color: var(--ink); font-size: 13px; font-weight: 500; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 12px;
+  background: none; color: #fff; font: inherit; font-size: 13px; text-align: left; cursor: pointer;
 }
-.item:hover { background: var(--accent-soft); }
-.item .icon { color: var(--accent); width: 17px; height: 17px; }
+.item:hover { background: rgba(255, 255, 255, 0.1); }
+.item .icon { color: #3a9bff; width: 17px; height: 17px; }
 .item .label { flex: 1; white-space: nowrap; }
-.item .hint { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
+.item .hint { font-size: 11.5px; color: rgba(255, 255, 255, 0.55); }
 .item .pro { display: none; }
 
 /* Community edition: Pick on screen is a Pro feature. */

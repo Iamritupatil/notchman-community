@@ -13,9 +13,10 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 const {
-  app, BrowserWindow, Tray, Menu, clipboard, globalShortcut, ipcMain, screen, nativeImage, shell, Notification, desktopCapturer,
+  app, BrowserWindow, Tray, Menu, clipboard, globalShortcut, ipcMain, screen, nativeImage, shell, Notification, desktopCapturer, nativeTheme,
 } = require('electron');
 const config = require('./config');
 
@@ -406,27 +407,33 @@ async function readClipboard() {
 
 /** Audio for one piece, voiced with its neighbours as context; cached on disk. */
 async function pieceAudio(id, index) {
-  if (!session || session.id !== id) return null;
-  const pieces = session.pieces;
+  const current = session;
+  if (!current || current.id !== id) return null;
+  const pieces = current.pieces;
   const text = pieces[index];
   if (!text) return null;
   const voiceId = settings.get('voiceId');
-  const key = `${voiceId}-${hash(text)}`;
-  if (audioCache.has(key)) return audioCache.get(key);
-  const file = path.join(voiceDirectory, `${key}.mp3`);
+  // The standard voice's audio is kept apart, so a piece never comes back in the other voice.
+  const cacheKey = (tier) => `${voiceId}-${tier === 'standard' ? 'std-' : ''}${hash(text)}`;
+  const wanted = cacheKey(current.voiceTier);
+  if (audioCache.has(wanted)) return audioCache.get(wanted);
   try {
-    const saved = fs.readFileSync(file);
-    audioCache.set(key, saved);
+    const saved = fs.readFileSync(path.join(voiceDirectory, `${wanted}.mp3`));
+    audioCache.set(wanted, saved);
     return saved;
   } catch { /* not saved yet */ }
   const audio = await api.speak({
     text, voiceId, previousText: pieces[index - 1], nextText: pieces[index + 1],
+    // The first piece says how long the whole text is; later ones keep its voice.
+    ...(index === 0 ? { totalCharacters: pieces.reduce((sum, piece) => sum + piece.length, 0) } : { voiceTier: current.voiceTier }),
   });
+  if (index === 0 && audio.voiceTier) current.voiceTier = audio.voiceTier;
+  const key = cacheKey(audio.voiceTier || current.voiceTier);
   audioCache.set(key, audio);
   if (audioCache.size > 200) audioCache.delete(audioCache.keys().next().value);
   try {
     fs.mkdirSync(voiceDirectory, { recursive: true });
-    fs.writeFileSync(file, audio);
+    fs.writeFileSync(path.join(voiceDirectory, `${key}.mp3`), audio);
   } catch { /* cache is optional */ }
   return audio;
 }
@@ -447,6 +454,25 @@ async function renderPage(url) {
 // The pill
 
 const PILL = { width: 467, height: 73 }; // the 455 × 65 pill of the design, with room for its edge
+const PILL_SHAPE = { x: 6, y: 4, width: 455, height: 65, radius: 22 }; // where the pill sits in its window
+
+// Real frosted glass: on Windows 11 the system blurs what's behind the pill
+// (acrylic), and the window is cut to the pill's rounded shape so only the
+// pill is frosted. Elsewhere the pill is see-through glass.
+const systemGlass = process.platform === 'win32' && Number(os.release().split('.')[2]) >= 22621;
+
+/** A rounded rectangle as rows of rectangles (window shapes are made of rectangles). */
+function roundedShape({ x, y, width, height, radius }) {
+  const rows = [];
+  for (let row = 0; row < radius; row += 1) {
+    const dy = radius - row - 0.5;
+    const inset = Math.round(radius - Math.sqrt(radius * radius - dy * dy));
+    rows.push({ x: x + inset, y: y + row, width: width - inset * 2, height: 1 });
+    rows.push({ x: x + inset, y: y + height - row - 1, width: width - inset * 2, height: 1 });
+  }
+  rows.push({ x, y: y + radius, width, height: height - radius * 2 });
+  return rows;
+}
 
 function createPill() {
   pill = new BrowserWindow({
@@ -466,6 +492,7 @@ function createPill() {
     focusable: false,
     alwaysOnTop: true,
     ...(isMac ? { type: 'panel' } : {}),
+    ...(systemGlass ? { backgroundMaterial: 'acrylic' } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'ui', 'preload.js'),
       contextIsolation: true,
@@ -476,11 +503,16 @@ function createPill() {
   });
   pill.setAlwaysOnTop(true, 'screen-saver');
   if (isMac) pill.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (systemGlass) {
+    // Dark frosted glass whatever the Windows theme, so the white text reads.
+    nativeTheme.themeSource = 'dark';
+    pill.setShape(roundedShape(PILL_SHAPE));
+  }
   // Clicks go through the pill's window except while the mouse is over the
   // pill itself (the page says when). The Shiba takes clicks the same way.
   pill.setIgnoreMouseEvents(true, { forward: true });
   pillReady = new Promise((resolve) => pill.webContents.once('did-finish-load', resolve));
-  pill.loadFile(path.join(__dirname, 'ui', 'pill.html'));
+  pill.loadFile(path.join(__dirname, 'ui', 'pill.html'), systemGlass ? { query: { glass: 'system' } } : undefined);
 }
 
 function showPill() {
@@ -488,6 +520,7 @@ function showPill() {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const { x, y, width } = display.bounds;
   pill.setBounds({ x: Math.round(x + (width - PILL.width) / 2), y: y + (isMac ? 4 : 8), ...PILL });
+  if (systemGlass) pill.setShape(roundedShape(PILL_SHAPE)); // again: a new screen can have another scale
   pill.showInactive();
 }
 
@@ -559,6 +592,7 @@ function warmKokoro() {
     .finally(() => { kokoroWarming = null; });
 }
 const KOKORO_PIECE_MS = 8000;
+const KOKORO_LATER_PIECE_MS = 45_000;
 
 async function kokoroAudio(text) {
   const key = hash(text);
@@ -570,32 +604,43 @@ async function kokoroAudio(text) {
 }
 
 ipcMain.handle('piece', async (_event, id, index) => {
-  const text = session?.id === id ? session.pieces[index] : null;
+  const current = session;
+  const text = current?.id === id ? current.pieces[index] : null;
   if (!text) return null;
+  // One voice reads a session from start to end: the voice of its first piece.
   // Full reads are long: they use the free voice so the cloud voice's credits
-  // go to TL;DRs.
-  if (!usingLocalVoice() && session.action !== 'read') {
-    try {
-      return { audio: await pieceAudio(id, index), type: 'audio/mpeg' };
-    } catch (error) {
-      console.error('cloud voice failed, using the computer voice', error);
-      markCloudVoiceFailed();
+  // go to TL;DRs. Kokoro isn't ready yet: the computer's voice, at once.
+  if (!current.voice) current.voice = !usingLocalVoice() && current.action !== 'read' ? 'cloud' : current.kokoro ? 'kokoro' : 'system';
+  if (current.voice === 'cloud') {
+    // A failed piece is tried again before the voice changes.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return { audio: await pieceAudio(id, index), type: 'audio/mpeg' };
+      } catch (error) {
+        console.error('cloud voice failed', error);
+        if (session?.id !== id) return null;
+      }
     }
+    markCloudVoiceFailed();
+    current.voice = current.kokoro ? 'kokoro' : 'system';
   }
-  // Kokoro isn't ready yet: the computer's voice reads this session at once.
-  if (!session.kokoro) {
+  if (current.voice === 'system') {
     warmKokoro();
     return { speak: text };
   }
   try {
-    // Never leave people waiting in silence: past a few seconds, the computer's voice.
+    // Never leave people waiting in silence before the first words. Later
+    // pieces are voiced while earlier ones play, so they get longer before
+    // the voice would change.
+    const wait = index === 0 ? KOKORO_PIECE_MS : KOKORO_LATER_PIECE_MS;
     const audio = await Promise.race([
       kokoroAudio(text),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Kokoro is slow')), KOKORO_PIECE_MS)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Kokoro is slow')), wait)),
     ]);
     return { audio, type: 'audio/wav' };
   } catch (error) {
     console.error('Kokoro failed, using the system voice', error);
+    current.voice = 'system';
     return { speak: text };
   }
 });
