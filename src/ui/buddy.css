@@ -33,7 +33,6 @@ html, body { background: transparent; overflow: hidden; user-select: none; -webk
 /* The menu: a glass card like the pill (dark glass, a thin light rim, white
    text, blue icons). Its shadow is small so it stays inside the window (a
    cut-off shadow shows as a box). */
-@font-face { font-family: "Inter"; src: url("../../assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
 .menu {
   width: 194px; padding: 6px; display: grid; gap: 2px; border-radius: 18px;
   font-family: "Inter", system-ui, sans-serif; color: #fff;

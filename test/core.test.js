@@ -222,3 +222,49 @@ test('a TL;DR keeps the key points the server sends, for History', async () => {
     assert.equal(await siteIcon('not a url', touch), null);
   });
 }
+
+// --- Insights ---------------------------------------------------------------------
+
+{
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { createInsightsStore } = require('../src/insights-store');
+  const at = (day, hour = 12) => new Date(`${day}T${String(hour).padStart(2, '0')}:00:00`).getTime();
+
+  test('insights: totals, time saved, listening speed, top apps', () => {
+    const store = createInsightsStore(fs.mkdtempSync(path.join(os.tmpdir(), 'nm-insights-')));
+    store.record({ action: 'tldr', original: 'word '.repeat(1190), spoken: 'word '.repeat(155), app: 'chatgpt', at: at('2026-10-20') });
+    store.record({ action: 'tldr', original: 'word '.repeat(476), spoken: 'word '.repeat(155), app: 'chatgpt', at: at('2026-10-21') });
+    store.record({ action: 'read', spoken: 'word '.repeat(310), app: 'claude', at: at('2026-10-21') });
+    const s = store.summary(at('2026-10-21', 20));
+    assert.equal(s.tldrs, 2);
+    assert.equal(s.reads, 1);
+    assert.equal(s.wordsIn, 1190 + 476 + 310);
+    assert.equal(s.minutesHeard, 4); // 155 + 155 + 310 words at 155 a minute
+    assert.equal(s.minutesSaved, Math.round(1976 / 238 - 4));
+    assert.equal(s.wordsPerMinute, Math.round(1976 / 4));
+    assert.deepEqual(s.apps[0], { app: 'chatgpt', count: 2 });
+  });
+
+  test('insights: streaks count days in a row, and survive until you listen today', () => {
+    const store = createInsightsStore(fs.mkdtempSync(path.join(os.tmpdir(), 'nm-insights-')));
+    for (const day of ['2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-20', '2026-10-21']) {
+      store.record({ action: 'tldr', spoken: 'hi there', at: at(day) });
+    }
+    assert.equal(store.summary(at('2026-10-21')).streak, 2);
+    assert.equal(store.summary(at('2026-10-22')).streak, 2); // not listened yet today
+    assert.equal(store.summary(at('2026-10-23')).streak, 0);
+    assert.equal(store.summary(at('2026-10-21')).bestStreak, 4);
+    const grid = store.summary(at('2026-10-21')).grid;
+    assert.equal(grid.at(-1).day, '2026-10-21');
+    assert.equal(new Date(`${grid[0].day}T12:00:00`).getDay(), 0); // weeks start on Sunday
+    assert.equal(grid.find((g) => g.day === '2026-10-20').listens, 1);
+  });
+
+  test('insights: the first run starts from History', () => {
+    const history = { list: () => [{ action: 'tldr', spoken: 'a b c', original: 'a b c d e f', app: 'x', at: at('2026-10-02') }] };
+    const store = createInsightsStore(fs.mkdtempSync(path.join(os.tmpdir(), 'nm-insights-')), { history });
+    assert.equal(store.summary(at('2026-10-02')).tldrs, 1);
+  });
+}

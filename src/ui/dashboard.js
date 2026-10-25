@@ -206,14 +206,58 @@
     return new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   }
 
-  function stats(items) {
-    const spoken = items.reduce((n, i) => n + words(i.spoken), 0);
-    // Reading at ~250 words a minute vs. the TL;DR heard instead.
-    const saved = items.filter((i) => i.action === 'tldr' && i.original)
-      .reduce((n, i) => n + Math.max(0, words(i.original) - words(i.spoken)), 0);
-    $('statListens').textContent = items.length.toLocaleString();
-    $('statMinutes').textContent = Math.round(spoken / 150).toLocaleString();
-    $('statSaved').textContent = `${Math.round(saved / 250).toLocaleString()} min`;
+  // --- Insights (Home) -----------------------------------------------------------
+
+  const APP_NAMES = { chatgpt: 'ChatGPT', claude: 'Claude', x: 'X', linkedin: 'LinkedIn', grok: 'Grok', other: 'Other apps' };
+  const compact = (n) => (n >= 10000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : n.toLocaleString());
+  const duration = (minutes) => {
+    const m = Math.round(minutes);
+    return m < 1 ? (minutes > 0 ? 'under a minute' : '0 min') : m >= 90 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+  };
+
+  function greeting() {
+    const hour = new Date().getHours();
+    return hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  }
+
+  async function loadInsights() {
+    const s = await window.notchman.insights();
+    $('greeting').textContent = greeting();
+    $('streakDays').textContent = s.streak;
+    $('streak').classList.toggle('on', s.streak > 0);
+    $('streak').title = s.bestStreak > s.streak ? `Your best: ${s.bestStreak} days in a row` : 'Days in a row you listened';
+    $('mTldrs').textContent = compact(s.tldrs);
+    $('mTldrsNote').textContent = s.reads ? `and ${s.reads.toLocaleString()} read in full` : 'summaries you listened to';
+    $('mWords').textContent = compact(s.wordsIn);
+    $('mSaved').textContent = duration(s.minutesSaved);
+    $('mHeard').textContent = `for ${duration(s.minutesHeard)} of listening`;
+    $('mSpeed').textContent = s.wordsPerMinute ? s.wordsPerMinute.toLocaleString() : '–';
+    $('mSpeedNote').textContent = s.wordsPerMinute
+      ? `words a minute, ${(s.wordsPerMinute / s.readingWordsPerMinute).toFixed(1)}× reading speed`
+      : 'shows after a few listens';
+    $('activityNote').textContent = s.activeDays
+      ? `${s.activeDays} active ${s.activeDays === 1 ? 'day' : 'days'} · best streak ${s.bestStreak} ${s.bestStreak === 1 ? 'day' : 'days'}`
+      : 'Your listening days show up here';
+
+    // GitHub-style: one column per week, darker for busier days.
+    const top = Math.max(1, ...s.grid.map((d) => d.listens));
+    const level = (n) => (n === 0 ? 0 : Math.min(4, Math.ceil((n / top) * 4)));
+    $('heatmap').replaceChildren(...s.grid.map((d) => {
+      const cell = el('i', `l${level(d.listens)}`);
+      const date = new Date(`${d.day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      cell.title = `${d.listens ? `${d.listens} ${d.listens === 1 ? 'listen' : 'listens'}` : 'No listens'} · ${date}`;
+      return cell;
+    }));
+
+    const most = Math.max(1, ...s.apps.map((a) => a.count));
+    $('apps').replaceChildren(...(s.apps.length ? s.apps.map((a) => {
+      const li = el('li');
+      const bar = el('span', 'bar');
+      bar.style.width = `${Math.round((a.count / most) * 100)}%`;
+      li.append(el('span', 'app-name', APP_NAMES[a.app] || a.app), el('span', 'bar-track'), el('span', 'app-count', a.count.toLocaleString()));
+      li.querySelector('.bar-track').append(bar);
+      return li;
+    }) : [el('li', 'empty', 'The apps you listen from show up here.')]));
   }
 
   function iconButton(name, title, className = '') {
@@ -294,7 +338,7 @@
     $('history').replaceChildren(...(shown.length ? shown.map((i) => row(i)) : [empty(query ? 'Nothing matches.' : nothingYet)]));
     $('recent').replaceChildren(...(historyItems.length ? historyItems.slice(0, 5).map((i) => row(i, { compact: true })) : [empty(nothingYet)]));
     $('clearHistory').classList.toggle('gone', !historyItems.length);
-    stats(historyItems);
+    loadInsights();
     detail();
   }
 
@@ -403,10 +447,6 @@
   });
 
   // --- Start ------------------------------------------------------------------
-
-  // The Shiba on Home says hello each time the window opens.
-  const heroShiba = window.createShiba($('heroShiba'), { scale: 3, variant: 'head' });
-  heroShiba.setMood('hello');
 
   window.notchman.onDashboard(({ tab, changed }) => {
     if (tab) show(tab);

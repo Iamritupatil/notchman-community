@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('notchman', {
   // The Notchman window (dashboard).
   usage: () => ipcRenderer.invoke('dashboard:usage'),
   history: () => ipcRenderer.invoke('dashboard:history'),
+  insights: () => ipcRenderer.invoke('dashboard:insights'),
   removeHistory: (id) => ipcRenderer.invoke('dashboard:history-remove', id),
   clearHistory: () => ipcRenderer.invoke('dashboard:history-clear'),
   replay: (id) => ipcRenderer.send('dashboard:replay', id),

@@ -30,6 +30,7 @@ const { createKeyStore } = require('./key-store');
 const { createPipeline, NothingToRead, hash } = require('./core/pipeline');
 const { split } = require('./core/speech-text');
 const { createHistoryStore } = require('./history-store');
+const { createInsightsStore } = require('./insights-store');
 const links = require('./core/links');
 const { standaloneURL } = require('./core/input');
 const sourceApp = require('./core/source-app');
@@ -72,6 +73,7 @@ function setOpenAtLogin(on) {
 
 let settings;
 let history;
+let insights;
 let dashboard = null;
 let updateAvailable = null;
 let api;
@@ -138,6 +140,7 @@ app.whenReady().then(() => {
   if (isMac) app.dock?.hide();
   settings = createSettingsStore(app.getPath('userData'));
   history = createHistoryStore(app.getPath('userData'));
+  insights = createInsightsStore(app.getPath('userData'), { history });
   voiceDirectory = path.join(app.getPath('userData'), 'voice');
   if (edition.community) {
     // Keys are set up in the terminal (npm run setup → .env), never in the app.
@@ -337,6 +340,7 @@ async function run(action, copiedOverride, { source, app: appHint, appIcon: icon
     const fromApp = sourceApp.appFromSource(prepared.source) || webApp;
     startPlayback(id, action, { ...prepared, app: fromApp, appIcon: await Promise.resolve(appIcon) });
     history?.add({ action, title: prepared.title, source: prepared.source, app: fromApp, spoken: prepared.spoken, original: prepared.original, highlights: prepared.highlights });
+    insights?.record({ action, spoken: prepared.spoken, original: prepared.original, app: fromApp, speed: settings.get('speed') });
     dashboard?.webContents.send('dashboard:changed');
   } catch (error) {
     if (id !== session?.id) return;
@@ -1071,6 +1075,7 @@ ipcMain.handle('dashboard:usage', async () => {
   }
 });
 ipcMain.handle('dashboard:history', () => history.list());
+ipcMain.handle('dashboard:insights', () => insights.summary());
 // The Notchman window's own events: the Plan screen seen, an Upgrade button tapped.
 ipcMain.on('track', (_event, name) => {
   if (name === 'paywall_viewed' || name === 'pro_button_tap') analytics.track(name);

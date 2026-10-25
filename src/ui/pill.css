@@ -2,7 +2,6 @@
    455 × 65, 22 px corners, #0C0C0C glass, Inter Regular in white (a little
    bigger than the design's 12 / 8 px so it reads at a glance), a #3A9BFF
    progress bar, blue Liquid Glass buttons and #404041 round buttons. */
-@font-face { font-family: "Inter"; src: url("../../assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; }
 :root { --glass-blue: #047df4; }
 html, body { background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
 

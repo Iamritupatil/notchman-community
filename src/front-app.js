@@ -134,4 +134,4 @@ async function siteIcon(url, fetchImpl = fetch) {
   return null;
 }
 
-module.exports = { frontAppIcon, siteIcon };
+module.exports = { frontAppIcon, siteIcon, macAppIcon };

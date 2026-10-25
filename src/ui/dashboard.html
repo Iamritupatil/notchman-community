@@ -9,7 +9,7 @@
 </head>
 <body>
   <nav class="sidebar">
-    <div class="brand"><img src="../../assets/shiba-face.png" alt=""><span>Notchman</span></div>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span>Notchman</span></div>
     <button class="nav-item" data-tab="home"><i data-icon="home"></i><span>Home</span></button>
     <button class="nav-item" data-tab="history"><i data-icon="history"></i><span>History</span></button>
     <button class="nav-item" data-tab="plan"><i data-icon="plan"></i><span>Plan</span></button>
@@ -37,13 +37,53 @@
         <span id="updateText">A new version of Notchman is ready.</span>
         <button class="btn btn-primary btn-sm" id="bannerInstall">Update now</button>
       </div>
-      <header class="page-head"><h1 class="title-1">Home</h1></header>
+      <header class="page-head home-head">
+        <div>
+          <h1 class="title-1" id="greeting">Welcome back</h1>
+          <p class="muted">Select text anywhere and press <kbd id="homeTldrKey">Alt+T</kbd> for a TL;DR, or <kbd id="homeReadKey">Alt+R</kbd> to hear every word.</p>
+        </div>
+        <div class="streak" id="streak" title="Days in a row you listened">
+          <i data-icon="flame"></i><span><b id="streakDays">0</b> day streak</span>
+        </div>
+      </header>
 
-      <div class="card hero">
-        <span class="hero-shiba" id="heroShiba"></span>
-        <div class="hero-text">
-          <h2 class="title-2">Select text anywhere, then press <kbd id="homeTldrKey">Alt+T</kbd></h2>
-          <p class="muted">You hear the TL;DR while you keep working. <kbd id="homeReadKey">Alt+R</kbd> reads every word.</p>
+      <div class="metrics">
+        <div class="card metric">
+          <span class="metric-label">TL;DRs</span>
+          <span class="metric-value" id="mTldrs">0</span>
+          <span class="caption" id="mTldrsNote">and 0 read in full</span>
+        </div>
+        <div class="card metric">
+          <span class="metric-label">Words covered</span>
+          <span class="metric-value" id="mWords">0</span>
+          <span class="caption">that you didn't have to read</span>
+        </div>
+        <div class="card metric">
+          <span class="metric-label">Time saved</span>
+          <span class="metric-value" id="mSaved">0 min</span>
+          <span class="caption" id="mHeard">0 min of listening</span>
+        </div>
+        <div class="card metric">
+          <span class="metric-label">Your speed</span>
+          <span class="metric-value" id="mSpeed">–</span>
+          <span class="caption" id="mSpeedNote">words a minute, by listening</span>
+        </div>
+      </div>
+
+      <div class="card activity">
+        <div class="card-head"><h2 class="title-2">Activity</h2><span class="caption" id="activityNote"></span></div>
+        <div class="heatmap-wrap"><div class="heatmap" id="heatmap"></div></div>
+        <div class="heatmap-legend caption"><span>Less</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span></div>
+      </div>
+
+      <div class="home-grid">
+      <div class="card">
+        <div class="card-head"><h2 class="title-2">Recent</h2><button class="btn btn-ghost btn-sm" data-goto="history">See all</button></div>
+        <ul class="list history" id="recent"></ul>
+      </div>
+        <div class="card apps-card">
+          <div class="card-head"><h2 class="title-2">Where you listen</h2></div>
+          <ul class="apps" id="apps"></ul>
         </div>
       </div>
 
@@ -62,20 +102,9 @@
         </button>
       </div>
 
-      <div class="card stats">
-        <div class="stat"><span class="stat-value" id="statListens">0</span><span class="caption">Listens</span></div>
-        <div class="stat"><span class="stat-value" id="statMinutes">0</span><span class="caption">Minutes heard</span></div>
-        <div class="stat"><span class="stat-value" id="statSaved">0 min</span><span class="caption">Reading saved</span></div>
-        <div class="stat pro-only">
-          <span class="stat-value" id="voiceCount">–</span>
-          <span class="caption" id="voiceNote">Notchman voice left</span>
-          <div class="meter"><div id="voiceMeter"></div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-head"><h2 class="title-2">Recent</h2><button class="btn btn-ghost btn-sm" data-goto="history">See all</button></div>
-        <ul class="list history" id="recent"></ul>
+      <div class="card voice-left pro-only">
+        <div class="row"><span class="row-text"><span class="row-title" id="voiceNote">Notchman voice left</span><span class="caption">This month</span></span>
+          <div class="voice-meter"><span class="stat-value" id="voiceCount">–</span><div class="meter"><div id="voiceMeter"></div></div></div></div>
       </div>
     </section>
 
@@ -241,7 +270,6 @@
   </dialog>
 
   <script src="icons.js"></script>
-  <script src="shiba.js"></script>
   <script src="settings.js"></script>
   <script src="dashboard.js"></script>
 </body>
