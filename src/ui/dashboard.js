@@ -145,6 +145,7 @@
         ? "You're on Free. TL;DRs always work with the free voice on your computer. Upgrade for the natural Notchman voice."
         : "You're on Free. Try it first: select some text anywhere and press your TL;DR shortcut. Upgrade only if you want more.")
       : `You're on ${plan}, with about ${minutes(left)} min of Notchman voice left ${period}.`;
+    showValue(usage);
     for (const card of document.querySelectorAll('.plan')) {
       const current = card.dataset.plan === usage.plan;
       card.classList.toggle('current', current);
@@ -153,6 +154,24 @@
       else button.textContent = current ? 'Your plan' : 'Included';
     }
     return usage;
+  }
+
+  // What Notchman has already done for you, above the plans: people value
+  // what they've used, and the free allowance shows how much is left.
+  async function showValue(usage) {
+    const s = await window.notchman.insights().catch(() => null);
+    const strip = $('valueStrip');
+    if (!s || !s.listens) { strip.classList.add('gone'); return; }
+    strip.classList.remove('gone');
+    const saved = s.minutesSaved >= 1 ? `${s.minutesSaved.toLocaleString()} min of reading` : `${s.wordsIn.toLocaleString()} words of reading`;
+    $('valueTitle').textContent = `Notchman has saved you ${saved} so far.`;
+    $('valueNote').textContent = `${s.listens.toLocaleString()} ${s.listens === 1 ? 'listen' : 'listens'}${s.streak > 1 ? ` · ${s.streak}-day streak` : ''}`;
+    const free = usage.plan === 'free' && usage.limit > 0;
+    $('freeMeterWrap').classList.toggle('gone', !free);
+    if (free) {
+      $('freeMeterText').textContent = `${Math.min(usage.used, usage.limit)} of ${usage.limit} free TL;DRs used this month`;
+      $('freeMeter').style.width = `${percent(usage.used, usage.limit)}%`;
+    }
   }
 
   // After checkout opens: look every few seconds until the payment shows up

@@ -140,42 +140,66 @@
         </ul>
         <button class="btn btn-primary" data-action="pro">Get Notchman Pro<i data-icon="external"></i></button>
       </div>
-      <div class="plans pro-only">
-        <div class="card plan" data-plan="free">
-          <h2 class="title-2">Free</h2>
-          <div class="price"><b>$0</b></div>
-          <ul class="checks">
-            <li><i data-icon="check"></i><span>15 TL;DRs a month, of texts up to 8,000 characters</span></li>
-            <li><i data-icon="check"></i><span>A preview of the Notchman voice (about 3 min)</span></li>
-            <li><i data-icon="check"></i><span>Unlimited free voice on your computer</span></li>
-          </ul>
-          <button class="btn btn-secondary" disabled>Included</button>
+      <div class="value-strip card pro-only gone" id="valueStrip">
+        <div class="value-main">
+          <span class="value-title" id="valueTitle"></span>
+          <span class="caption" id="valueNote"></span>
         </div>
-        <div class="card plan" data-plan="pro">
-          <h2 class="title-2">Pro</h2>
-          <div class="price"><b>$4.99</b> / month</div>
-          <p class="muted plan-line">Listen to long text without API keys.</p>
-          <ul class="checks">
-            <li><i data-icon="check"></i><span>About 28 min of the Notchman voice a month (25,000 characters)</span></li>
-            <li><i data-icon="check"></i><span>Up to 500 TL;DRs a month, including long reports and papers</span></li>
-            <li><i data-icon="check"></i><span>Pick any paragraph on screen</span></li>
-            <li><i data-icon="check"></i><span>After that, the standard voice keeps reading</span></li>
-          </ul>
-          <button class="btn btn-primary" data-upgrade="pro">Upgrade to Pro</button>
-        </div>
-        <div class="card plan best" data-plan="proplus">
-          <span class="tag best-tag">Best value</span>
-          <h2 class="title-2">Pro+</h2>
-          <div class="price"><b>$9.99</b> / month</div>
-          <p class="muted plan-line">For heavy daily listening with higher usage.</p>
-          <ul class="checks">
-            <li><i data-icon="check"></i><span>About 67 min of the Notchman voice a month (60,000 characters)</span></li>
-            <li><i data-icon="check"></i><span>Up to 1,500 TL;DRs a month</span></li>
-            <li><i data-icon="check"></i><span>Everything in Pro</span></li>
-          </ul>
-          <button class="btn btn-primary" data-upgrade="proplus">Upgrade to Pro+</button>
+        <div class="value-meter gone" id="freeMeterWrap">
+          <span class="caption" id="freeMeterText"></span>
+          <div class="meter"><div id="freeMeter"></div></div>
         </div>
       </div>
+
+      <div class="plans pro-only">
+        <div class="card plan" data-plan="free">
+          <div class="plan-head"><h2 class="title-2">Free</h2></div>
+          <div class="price"><b>$0</b></div>
+          <p class="plan-line muted">To try Notchman on short texts.</p>
+          <button class="btn btn-secondary btn-block" disabled>Included</button>
+          <ul class="checks">
+            <li><i data-icon="check"></i><span>15 TL;DRs a month</span></li>
+            <li><i data-icon="check"></i><span>Texts up to 8,000 characters</span></li>
+            <li><i data-icon="check"></i><span>Free voice on your computer</span></li>
+          </ul>
+        </div>
+        <div class="card plan featured" data-plan="pro">
+          <div class="plan-head"><h2 class="title-2">Pro</h2><span class="tag tag-featured">Most popular</span></div>
+          <div class="price"><b>$4.99</b><span>/ month</span></div>
+          <p class="plan-line muted">Listen to long text without API keys. About 17¢ a day.</p>
+          <button class="btn btn-primary btn-block" data-upgrade="pro">Upgrade to Pro</button>
+          <ul class="checks">
+            <li><i data-icon="check"></i><span><b>500 TL;DRs</b> a month</span></li>
+            <li><i data-icon="check"></i><span>Long reports, papers and pages</span></li>
+            <li><i data-icon="check"></i><span>The natural Notchman voice, about 28 min a month</span></li>
+            <li><i data-icon="check"></i><span>Pick any paragraph on screen</span></li>
+          </ul>
+        </div>
+        <div class="card plan" data-plan="proplus">
+          <div class="plan-head"><h2 class="title-2">Pro+</h2></div>
+          <div class="price"><b>$9.99</b><span>/ month</span></div>
+          <p class="plan-line muted">For heavy daily listening with higher usage.</p>
+          <button class="btn btn-secondary btn-block" data-upgrade="proplus">Upgrade to Pro+</button>
+          <ul class="checks">
+            <li><i data-icon="check"></i><span><b>1,500 TL;DRs</b> a month</span></li>
+            <li><i data-icon="check"></i><span>2.4× the Notchman voice, about 67 min a month</span></li>
+            <li><i data-icon="check"></i><span>Everything in Pro</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="trust pro-only">
+        <span><i data-icon="lock"></i>Secure checkout</span>
+        <span><i data-icon="check"></i>Cancel anytime</span>
+        <span><i data-icon="shield"></i>We never keep your texts</span>
+      </div>
+
+      <div class="faq pro-only">
+        <details><summary>What happens when I use up the Notchman voice?</summary><p>Nothing stops. The standard voice keeps reading every TL;DR, and your Notchman voice comes back at the start of next month.</p></details>
+        <details><summary>Can I cancel anytime?</summary><p>Yes. Cancel from the link in your receipt email. You keep Pro until the end of the month you paid for, and you're never charged again.</p></details>
+        <details><summary>Do I need an API key or an account?</summary><p>No. Pro works the moment you pay: your plan is linked to this computer, and Notchman's cloud makes the TL;DR and the voice.</p></details>
+      </div>
+
       <p class="caption fine-print pro-only">Checkout opens in your browser; the price there includes any tax. Your plan is linked to this computer and shows here a moment after you pay. Subscriptions renew monthly until you cancel, from your receipt email. By upgrading you agree to the <a href="https://notchman.app/terms" target="_blank">Terms of Service</a> and <a href="https://notchman.app/privacy" target="_blank">Privacy Policy</a>.</p>
       <button class="btn btn-secondary btn-sm pro-only" id="refreshPlan">I've paid: refresh</button>
     </section>

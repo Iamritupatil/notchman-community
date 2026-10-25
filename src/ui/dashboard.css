@@ -10,8 +10,9 @@ body:not(.community) .community-only { display: none !important; }
   background: var(--surface-2); border-right: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; margin: 0 8px 20px; font: 600 15px/20px var(--font); letter-spacing: -0.02em; }
 /* The mark: a black tile with the notch pill in it. */
-.mark { position: relative; width: 22px; height: 22px; border-radius: 6px; background: var(--ink); flex: none; }
-.mark::after { content: ""; position: absolute; left: 5px; right: 5px; top: 5px; height: 5px; border-radius: 3px; background: #fff; }
+.mark { position: relative; width: 24px; height: 24px; border-radius: 7px; flex: none;
+  background: linear-gradient(165deg, #9ad3ff 0%, #4a9cf7 100%); box-shadow: inset 0 0 0 1px rgba(17, 17, 19, 0.06); }
+.mark::after { content: ""; position: absolute; left: 4px; right: 4px; top: 11px; height: 7px; border-radius: 4px; background: #111113; }
 .nav-item { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-sm);
   background: none; color: var(--ink-2); font-size: 13.5px; font-weight: 500; text-align: left; cursor: pointer; }
 .nav-item .icon { width: 17px; height: 17px; }
@@ -132,21 +133,47 @@ main { flex: 1; min-width: 0; overflow-y: auto; padding: 32px 40px 48px; }
 .key-points li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink); }
 
 /* Plan */
+.value-strip { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 20px; margin-bottom: 14px; }
+.value-main { display: grid; gap: 3px; min-width: 0; }
+.value-title { font-weight: 600; font-size: 14.5px; letter-spacing: -0.012em; }
+.value-meter { display: grid; gap: 6px; width: 240px; flex: none; }
+.value-meter .meter > div { background: var(--ink); }
+
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; align-items: stretch; }
+.plan { position: relative; display: flex; flex-direction: column; padding: 22px; }
+.plan-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
+.plan .price { display: flex; align-items: baseline; gap: 6px; margin: 10px 0 4px; color: var(--ink-2); }
+.plan .price b { font: 600 32px/38px var(--font); color: var(--ink); letter-spacing: -0.035em; }
+.plan .plan-line { font-size: 13px; line-height: 18px; min-height: 36px; margin-bottom: 16px; }
+.plan .btn { height: 38px; font-size: 13.5px; }
+.plan .checks { margin: 18px 0 0; gap: 10px; }
+.plan .checks li { font-size: 13.5px; }
+.plan .checks b { font-weight: 600; }
+.plan.featured { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), 0 12px 32px rgba(17, 17, 19, 0.08); }
+.tag-featured { color: #fff; background: var(--ink); border: 0; }
+.plan.current { border-color: var(--line-strong); box-shadow: var(--shadow-card); }
+.plan.current button { pointer-events: none; }
+.plan[data-plan="free"] .price b { color: var(--ink-2); }
+
+.trust { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; margin: 4px 0 22px; color: var(--ink-2); font-size: 12.5px; }
+.trust span { display: inline-flex; align-items: center; gap: 6px; }
+.trust .icon { width: 15px; height: 15px; }
+
+.faq { display: grid; gap: 8px; max-width: 760px; margin: 0 auto 22px; }
+.faq details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 16px; }
+.faq summary { cursor: pointer; list-style: none; padding: 13px 0; font-weight: 500; display: flex; justify-content: space-between; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--ink-3); font-weight: 400; }
+.faq details[open] summary::after { content: "–"; }
+.faq details p { padding: 0 0 14px; color: var(--ink-2); line-height: 20px; }
+.fine-print { max-width: 760px; margin: 0 auto 12px; text-align: center; }
+#refreshPlan { display: flex; margin: 0 auto; }
+
+/* Community */
 .subhead { font-size: 13px; font-weight: 600; margin: 18px 0 10px; }
 .checks { list-style: none; display: grid; gap: 8px; margin-bottom: 18px; }
 .checks li { display: flex; gap: 10px; line-height: 20px; }
 .checks .icon { width: 16px; height: 16px; margin-top: 2px; color: var(--ink); stroke-width: 2; }
-.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
-.plan { position: relative; display: flex; flex-direction: column; padding: 20px; }
-.plan .price { margin: 6px 0 16px; color: var(--ink-2); }
-.plan .price b { font: 600 26px/32px var(--font); color: var(--ink); letter-spacing: -0.03em; }
-.plan .plan-line { margin: -8px 0 14px; font-size: 13px; line-height: 18px; }
-.plan .checks { flex: 1; }
-.plan.best { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
-.plan.current { border-color: rgba(29, 127, 71, 0.55); }
-.plan.current button { pointer-events: none; }
-.best-tag { position: absolute; top: 20px; right: 20px; }
-.fine-print { max-width: 720px; margin-bottom: 12px; }
 
 /* Settings */
 .voices .voice { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 6px 12px 6px 16px; cursor: pointer; }
