@@ -7,6 +7,8 @@
 // Windows: the program behind the window in front (a small PowerShell call).
 // Mac: the frontmost application (osascript).
 
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 
@@ -53,6 +55,39 @@ async function frontAppPath() {
   return null;
 }
 
+const macIcons = new Map(); // app path → data URL or null
+
+/**
+ * A Mac app's icon, made by macOS's own tools in their own processes: the
+ * .icns named in its Info.plist, turned into a PNG by sips. (Electron's
+ * app.getFileIcon reads icons on a background thread, which crashes the
+ * whole app on recent macOS.)
+ */
+async function macAppIcon(appPath) {
+  if (macIcons.has(appPath)) return macIcons.get(appPath);
+  let icon = null;
+  try {
+    const plist = path.join(appPath, 'Contents', 'Info.plist');
+    let name = await run('/usr/bin/plutil', ['-extract', 'CFBundleIconFile', 'raw', '-o', '-', plist]);
+    if (!name) name = await run('/usr/bin/plutil', ['-extract', 'CFBundleIconName', 'raw', '-o', '-', plist]);
+    if (name) {
+      const icns = path.join(appPath, 'Contents', 'Resources', /\.icns$/i.test(name) ? name : `${name}.icns`);
+      if (fs.existsSync(icns)) {
+        const png = path.join(os.tmpdir(), `notchman-icon-${process.pid}-${Date.now()}.png`);
+        await run('/usr/bin/sips', ['-s', 'format', 'png', '--resampleHeightWidthMax', '128', icns, '--out', png]);
+        try {
+          const bytes = fs.readFileSync(png);
+          if (bytes.length > 64) icon = `data:image/png;base64,${bytes.toString('base64')}`;
+        } finally {
+          fs.rm(png, { force: true }, () => {});
+        }
+      }
+    }
+  } catch { /* no icon */ }
+  macIcons.set(appPath, icon);
+  return icon;
+}
+
 /**
  * The icon of the app in front, as a PNG data URL, or null (Notchman itself,
  * the desktop, or when it can't be read).
@@ -65,9 +100,11 @@ async function frontAppIcon(app) {
     const name = path.basename(found).toLowerCase();
     if (name.startsWith('notchman') || name === 'explorer.exe' || name === 'finder.app' || found === process.execPath) return null;
     // Never wait long for an icon: the pill goes on without it.
+    const wait = new Promise((resolve) => setTimeout(() => resolve(null), 2000));
+    if (process.platform === 'darwin') return await Promise.race([macAppIcon(found), wait]);
     const icon = await Promise.race([
       app.getFileIcon(found, { size: 'large' }),
-      new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
+      wait,
     ]);
     return icon && !icon.isEmpty() ? icon.toDataURL() : null;
   } catch {
