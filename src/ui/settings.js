@@ -70,6 +70,14 @@
       select.onchange = () => save({ [id]: select.value });
     }
 
+    const language = $('tldrLanguage');
+    language.replaceChildren(...(state.tldrLanguages || []).map((l) => {
+      const option = Object.assign(document.createElement('option'), { value: l.id, textContent: l.label });
+      option.selected = l.id === (settings.tldrLanguage || 'auto');
+      return option;
+    }));
+    language.onchange = () => save({ tldrLanguage: language.value });
+
     $('openAtLoginRow').classList.toggle('gone', state.canOpenAtLogin === false);
     $('openAtLogin').checked = Boolean(settings.openAtLogin);
     $('openAtLogin').onchange = () => save({ openAtLogin: $('openAtLogin').checked });

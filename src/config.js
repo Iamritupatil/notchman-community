@@ -58,7 +58,8 @@ module.exports = {
     "speed": 1,
     "tldrShortcut": "Alt+T",
     "readShortcut": "Alt+R",
-    "openAtLogin": true
+    "openAtLogin": true,
+    "tldrLanguage": "auto"
   },
   "shortcutChoices": {
     "tldr": [

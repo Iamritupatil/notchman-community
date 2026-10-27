@@ -186,7 +186,11 @@ function createPlayer({ id, pieceCount, speed }) {
   function speakPiece(i, text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = rate;
-    utterance.lang = 'en-US';
+    // Hindi (Devanagari, often with English words): a Hindi voice if the computer has one.
+    const hindi = /[\u0900-\u097F]/.test(text);
+    utterance.lang = hindi ? 'hi-IN' : 'en-US';
+    const voice = hindi && speech.getVoices().find((v) => /^hi/i.test(v.lang));
+    if (voice) utterance.voice = voice;
     speaking = { text, utterance, paused: false };
     utterance.onboundary = (event) => {
       if (index !== i) return;

@@ -161,7 +161,9 @@ app.whenReady().then(() => {
   }
   pipeline = createPipeline({
     resolve: (url) => links.resolve(url, { render: renderPage }),
-    summarize: (text) => api.tldr(text),
+    summarize: (text) => api.tldr(text, settings.get('tldrLanguage') || 'auto'),
+    // A TL;DR in another language is another TL;DR.
+    variant: () => settings.get('tldrLanguage') || 'auto',
   });
 
   createTray();
@@ -628,6 +630,8 @@ ipcMain.handle('piece', async (_event, id, index) => {
     markCloudVoiceFailed();
     current.voice = current.kokoro ? 'kokoro' : 'system';
   }
+  // Kokoro, the free voice on this computer, reads English only: Hindi goes to the computer's own voice.
+  if (current.voice === 'kokoro' && /[\u0900-\u097F]/.test(text)) return { speak: text };
   if (current.voice === 'system') {
     warmKokoro();
     return { speak: text };
@@ -1134,6 +1138,7 @@ ipcMain.handle('settings:get', () => ({
   upgradeConfigured: Boolean(config.upgradeLinks.pro || config.upgradeLinks.proplus),
   voices: config.voices,
   shortcutChoices: config.shortcutChoices,
+  tldrLanguages: config.tldrLanguages,
   platform: process.platform,
   version: app.getVersion(),
 }));
@@ -1147,6 +1152,7 @@ ipcMain.handle('settings:set', (_event, changes) => {
   if (typeof changes.openAtLogin === 'boolean') allowed.openAtLogin = changes.openAtLogin;
   if (typeof changes.showBuddy === 'boolean') allowed.showBuddy = changes.showBuddy;
   if (typeof changes.shareStats === 'boolean') allowed.shareStats = changes.shareStats;
+  if (config.tldrLanguages.some((l) => l.id === changes.tldrLanguage)) allowed.tldrLanguage = changes.tldrLanguage;
   const updated = settings.set(allowed);
   if ('tldrShortcut' in allowed || 'readShortcut' in allowed) {
     registerShortcuts();

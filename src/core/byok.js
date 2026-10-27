@@ -35,6 +35,15 @@ const INSTRUCTIONS = [
   'No lists, no markdown, no emojis. Use the language of the text. Reply with only the TL;DR.',
 ].join(' ');
 
+/** What a TL;DR in another language than the text's own should sound like. */
+const LANGUAGE_RULES = {
+  en: 'Answer in plain, everyday English, whatever language the text is in.',
+  hi: 'Answer in everyday spoken Hindi, the way people in India really talk, whatever language the text is in: Hindi sentences in Devanagari, '
+    + 'but keep the common English words people use every day in English letters ("ये बहुत common है", "meeting कल shift हो गई है"). '
+    + 'Write those English words in English letters, never spelled out in Devanagari ("launch", "update", not "लॉन्च", "अपडेट"). '
+    + 'Never use formal or shuddh Hindi words nobody says in conversation. Keep names, brands, technical terms and numbers as written.',
+};
+
 function wordLimit(text) {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(40, Math.min(120, Math.round(words / 3)));
@@ -56,7 +65,7 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
     };
   }
 
-  async function complete(text) {
+  async function complete(text, language = 'auto') {
     const provider = llm();
     if (!provider.key && !provider.local) {
       throw new ApiError('Notchman isn\'t set up yet. In its folder, run: npm run setup', 401);
@@ -73,7 +82,7 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
           // gpt-oss thinks before it answers, and the thinking counts toward max_tokens.
           ...(provider.model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low', max_tokens: 2000 } : { max_tokens: 700 }),
           messages: [
-            { role: 'system', content: INSTRUCTIONS },
+            { role: 'system', content: LANGUAGE_RULES[language] ? INSTRUCTIONS.replace('Use the language of the text.', LANGUAGE_RULES[language]) : INSTRUCTIONS },
             { role: 'user', content: `Make a TL;DR of this in ${wordLimit(text)} words at most.\n\nTEXT:\n${text.slice(0, MAX_INPUT_CHARACTERS)}` },
           ],
         }),
@@ -118,12 +127,12 @@ function createClient({ keys, fetch: fetchImpl = fetch }) {
     },
 
     /** @returns {Promise<string>} the spoken summary */
-    async tldr(text) {
+    async tldr(text, language = 'auto') {
       if (text.length > MAX_TLDR_CHARACTERS) {
         throw new ApiError("That's over 8,000 characters, the limit in Notchman Community. "
           + 'Notchman Pro makes TL;DRs of long texts too, like reports and research papers.', 413, 'too_long');
       }
-      return complete(text);
+      return complete(text, language);
     },
 
     /** @returns {Promise<Buffer>} MP3 audio of one piece (ElevenLabs). */

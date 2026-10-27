@@ -25,8 +25,9 @@ function hash(value) {
  * @param {(url: URL) => Promise<{text, title, source, url}>} deps.resolve
  * @param {(text: string) => Promise<string | {summary: string, highlights?: string[]}>} deps.summarize
  * @param {Map<string, object>} [deps.cache] results by copied value + action
+ * @param {() => string} [deps.variant] what else makes a TL;DR different (its language)
  */
-function createPipeline({ resolve, summarize, cache = new Map() }) {
+function createPipeline({ resolve, summarize, cache = new Map(), variant = () => '' }) {
   /**
    * @param {string} copied what's on the clipboard
    * @param {'tldr'|'read'} action
@@ -40,7 +41,7 @@ function createPipeline({ resolve, summarize, cache = new Map() }) {
     if (input.kind === 'short') throw new NothingToRead("That's too short to read. Copy the whole message.");
 
     // A second press on the same content doesn't fetch or summarize again.
-    const key = `${action}:${hash(copied)}`;
+    const key = `${action}:${action === 'tldr' ? variant() : ''}:${hash(copied)}`;
     if (cache.has(key)) return { ...cache.get(key), fromCache: true };
 
     let original;

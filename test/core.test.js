@@ -165,6 +165,17 @@ test('pressing again on the same content reuses the result; new content is new',
   assert.equal(calls.length, 2);
 });
 
+test('a TL;DR in another language is made again, not replayed', async () => {
+  let language = 'auto';
+  let calls = 0;
+  const pipeline = createPipeline({ resolve: async () => ({}), summarize: async () => { calls += 1; return 'Short TL;DR.'; }, variant: () => language });
+  await pipeline.prepare(POST, 'tldr');
+  language = 'hi';
+  assert.equal((await pipeline.prepare(POST, 'tldr')).fromCache, false);
+  assert.equal((await pipeline.prepare(POST, 'tldr')).fromCache, true);
+  assert.equal(calls, 2);
+});
+
 test('nothing copied gives a plain message', async () => {
   await assert.rejects(fakePipeline([]).prepare('', 'tldr'), NothingToRead);
   await assert.rejects(fakePipeline([]).prepare('ok', 'tldr'), /too short/);
