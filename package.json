@@ -24,7 +24,7 @@
     "linkedom": "^0.18.13"
   },
   "devDependencies": {
-    "electron": "^44.5.1",
+    "electron": "^44.10.0",
     "electron-builder": "^26.0.0"
   },
   "build": {
@@ -104,6 +104,14 @@
     "electronLanguages": [
       "en-US"
     ],
-    "compression": "maximum"
+    "compression": "maximum",
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    }
   }
 }

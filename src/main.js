@@ -16,7 +16,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const { spawn } = require('node:child_process');
 const {
-  app, BrowserWindow, Tray, Menu, clipboard, globalShortcut, ipcMain, screen, nativeImage, shell, Notification, desktopCapturer, nativeTheme,
+  app, BrowserWindow, Tray, Menu, clipboard, globalShortcut, ipcMain, screen, nativeImage, shell, Notification, desktopCapturer, nativeTheme, session: browserSessions,
 } = require('electron');
 const config = require('./config');
 
@@ -49,7 +49,26 @@ const proParagraphs = pro('./core/paragraphs');
 const proAnalytics = pro('./core/analytics');
 const PRO_URL = 'https://notchman.app';
 
-if (!app.requestSingleInstanceLock()) {
+// The Store version and the website version never share a data folder, and
+// the website version steps aside once the Store one is installed (store-handoff.js).
+const handoff = require('./store-handoff');
+let steppedAside = false;
+if (storeApp) {
+  const own = handoff.storeDataFolder(app.getPath('appData'));
+  try {
+    handoff.carryOver(app.getPath('userData'), own);
+  } catch (error) {
+    console.error('carry over failed', error);
+  }
+  app.setPath('userData', own);
+} else if (process.platform === 'win32' && !edition.community && !process.defaultApp
+           && handoff.storeVersionInstalled(process.env.LOCALAPPDATA)) {
+  steppedAside = true;
+  app.setLoginItemSettings({ openAtLogin: false });
+  app.exit(0);
+}
+
+if (steppedAside || !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => openSettings());
@@ -114,7 +133,7 @@ async function runSelfTest() {
       log(`${name}: FAILED ${error?.stack || error} (${Date.now() - started} ms)`);
     }
   };
-  log(`version ${app.getVersion()} ${process.platform} ${process.arch}`);
+  log(`version ${app.getVersion()} ${process.platform} ${process.arch}${storeApp ? ' (Microsoft Store package)' : ''}`);
   const image = nativeImage.createFromPath(selfTestArg.slice('--self-test='.length));
   const cache = path.join(app.getPath('userData'), 'ocr');
   if (screenReader) {
@@ -134,6 +153,7 @@ async function runSelfTest() {
 }
 
 app.whenReady().then(() => {
+  if (steppedAside) return;
   if (selfTestArg) return runSelfTest();
   // A new version downloaded earlier installs now, before anything opens.
   if (updater?.installPendingAtStart()) return;
@@ -208,7 +228,46 @@ app.whenReady().then(() => {
   // Everyone agrees to the Terms and Privacy Policy before first use.
   if (hasAgreed()) welcome();
   else openAgreement();
+  if (uiTestOut) runUiTest(uiTestOut);
 });
+
+// `--ui-test-out=<file>`: starts the app normally, opens the Notchman window
+// and writes what loaded on each tab (and any error) to the file, then quits.
+// CI runs it on the installed Windows and Store apps.
+const uiTestOut = process.argv.find((a) => a.startsWith('--ui-test-out='))?.slice('--ui-test-out='.length);
+
+async function runUiTest(out) {
+  const lines = [];
+  const log = (line) => { lines.push(line); fs.writeFileSync(out, lines.join('\n')); };
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  log(`version ${app.getVersion()} ${process.platform} ${process.arch}${storeApp ? ' (Microsoft Store package)' : ''}`);
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('console-message', (event, level, message) => log(`console: ${event.message ?? message}`));
+    contents.on('preload-error', (_e, file, error) => log(`preload error ${path.basename(file)}: ${error?.message}`));
+    contents.on('render-process-gone', (_e, details) => log(`renderer gone: ${details.reason}`));
+  });
+  await wait(5000);
+  openDashboard('settings');
+  await wait(4000);
+  const probe = `(async () => {
+    const call = (name) => window.notchman[name]().then(() => 'ok', (error) => 'FAILED ' + error.message);
+    return {
+      bridge: typeof window.notchman,
+      settings: await call('getSettings'), history: await call('history'), usage: await call('usage'), insights: await call('insights'),
+      speeds: document.getElementById('speeds').children.length,
+      languages: document.getElementById('tldrLanguage').options.length,
+      planLead: document.getElementById('planLead').textContent,
+    };
+  })()`;
+  try {
+    const result = await dashboard.webContents.executeJavaScript(probe);
+    for (const [key, value] of Object.entries(result)) log(`${key}: ${value}`);
+  } catch (error) {
+    log(`probe FAILED ${error.message}`);
+  }
+  log('done');
+  app.exit(0);
+}
 
 function welcome() {
   if (edition.community && !api.ready()) {
@@ -445,8 +504,23 @@ async function pieceAudio(id, index) {
 }
 
 /** Loads a page in a hidden browser window, for pages built with JavaScript. */
+/** The hidden browser for copied links: any page may be hostile, so it gets nothing beyond showing itself. */
+let renderSession = null;
+function lockedRenderSession() {
+  if (renderSession) return renderSession;
+  renderSession = browserSessions.fromPartition('render');
+  renderSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  renderSession.setPermissionCheckHandler(() => false);
+  renderSession.on('will-download', (event) => event.preventDefault());
+  return renderSession;
+}
+
 async function renderPage(url) {
-  const win = new BrowserWindow({ show: false, width: 1200, height: 900, webPreferences: { offscreen: true, javascript: true, partition: 'render' } });
+  const win = new BrowserWindow({ show: false, width: 1200, height: 900,
+    webPreferences: { offscreen: true, javascript: true, sandbox: true, contextIsolation: true, session: lockedRenderSession() } });
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event, target) => { if (!/^https?:\/\//i.test(target)) event.preventDefault(); });
+  win.webContents.on('will-redirect', (event, target) => { if (!/^https?:\/\//i.test(target)) event.preventDefault(); });
   try {
     await Promise.race([win.loadURL(url), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))]);
     await new Promise((resolve) => setTimeout(resolve, 1500));

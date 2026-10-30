@@ -9,10 +9,8 @@ body:not(.community) .community-only { display: none !important; }
 .sidebar { width: 216px; flex: none; display: flex; flex-direction: column; gap: 2px; padding: 20px 12px 14px;
   background: var(--surface-2); border-right: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; margin: 0 8px 20px; font: 600 15px/20px var(--font); letter-spacing: -0.02em; }
-/* The mark: a black tile with the notch pill in it. */
-.mark { position: relative; width: 24px; height: 24px; border-radius: 7px; flex: none;
-  background: linear-gradient(165deg, #9ad3ff 0%, #4a9cf7 100%); box-shadow: inset 0 0 0 1px rgba(17, 17, 19, 0.06); }
-.mark::after { content: ""; position: absolute; left: 4px; right: 4px; top: 11px; height: 7px; border-radius: 4px; background: #111113; }
+/* The mark: the Notchman app icon. */
+.mark { width: 24px; height: 24px; border-radius: 6px; flex: none; display: block; }
 .nav-item { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: var(--radius-sm);
   background: none; color: var(--ink-2); font-size: 13.5px; font-weight: 500; text-align: left; cursor: pointer; }
 .nav-item .icon { width: 17px; height: 17px; }
